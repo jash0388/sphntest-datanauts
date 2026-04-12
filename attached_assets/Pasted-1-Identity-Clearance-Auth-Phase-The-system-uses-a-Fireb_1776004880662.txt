@@ -1,0 +1,29 @@
+1. Identity & Clearance (Auth Phase)
+The system uses a Firebase-First identity flow. It restricts access to authenticated users with @gmail.com domains and enforces a "Security Dispatched" verification link. Until the Gmail link is clicked, the portal remains locked in a high-security cleared state.
+
+2. Node Synchronization (Registration Phase)
+Once verified, the subject must index their institutional parameters. This binds the unique User ID to specific metadata:
+
+Institutional Indexing: College name, Department, and Roll Number.
+Data Persistence: This information is mirrored to a high-performance database for result tracking.
+3. The Command Center (Selection & Profile)
+The student enters a "God-tier" dashboard where the system handles three primary streams:
+
+Active Grids: Fetching available exams that haven't been completed.
+Historical Logs: Retrieving past scores and aggregation metrics.
+Neural Logout: A destructive session purge that clears all local caches and terminates all active auth nodes.
+4. Security Protocol (Proctoring Engine)
+Before the test starts, the useExamSecurity hook is initialized.
+
+Domain Reconnection: Enforces strict fullscreen mode. If the subject leaves the tab or minimizes the browser, an "Integrity Breach" overlay locks the screen and logs a violation.
+Threshold Trigger: If violations exceed the set limit, the session is auto-terminated and submitted as a "Security Fail."
+5. Assessment Terminal (Exam Phase)
+A distraction-free UI where the subject navigates through a question matrix:
+
+Query Nodes: Dynamic rendering of MCQs and paragraph-based questions.
+Live Archive: Answers are saved locally and synced to the cloud state.
+6. Neural Decryption (Grading Phase)
+Upon submission, the system triggers the Gemini grading engine.
+
+AI Evaluation: Objective scores are calculated instantly, while subjective paragraph responses are sent to the AI for semantic grading based on teacher-defined rubrics.
+Final Archiving: The score, time-logs, and violation count are compiled into a final result object and stored in the Student History.
