@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript. Contains an Exam Portal web app with Firebase authentication, AI-powered grading, and proctoring.
 
 ## Stack
 
@@ -15,6 +15,30 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Auth**: Firebase (Gmail-only Google sign-in)
+- **AI Grading**: Gemini via Replit AI Integrations
+
+## Artifacts
+
+- **exam-portal** (react-vite, `/`) — Main student exam portal
+- **api-server** (Express, `/api`) — Backend REST API
+
+## Key Features
+
+1. **Firebase Gmail Auth** — Only @gmail.com accounts allowed; email verification flow
+2. **Student Registration** — College, Department, Roll Number stored in PostgreSQL
+3. **Command Center Dashboard** — Stats, available exams, past attempt history
+4. **Proctoring Engine** — Fullscreen enforcement, tab-switch detection, violation counter, auto-submit on threshold
+5. **Exam Interface** — MCQ + paragraph questions, debounced auto-save, countdown timer
+6. **AI Grading** — MCQ auto-graded, paragraph answers graded by Gemini with rubric-based feedback
+
+## Database Tables
+
+- `students` — Firebase UID, email, college, department, roll number
+- `exams` — Title, subject, duration, total marks, violation limit
+- `questions` — MCQ or paragraph, options, correct answer, rubric, marks
+- `attempts` — Student exam session with status, score, violation count
+- `answers` — Per-question responses with AI feedback and marks awarded
 
 ## Key Commands
 
@@ -24,4 +48,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## Environment Variables
+
+- `VITE_FIREBASE_*` — Firebase configuration (all set)
+- `AI_INTEGRATIONS_GEMINI_BASE_URL` / `AI_INTEGRATIONS_GEMINI_API_KEY` — Gemini AI (auto-provisioned)
+- `DATABASE_URL` — PostgreSQL connection (auto-provisioned)

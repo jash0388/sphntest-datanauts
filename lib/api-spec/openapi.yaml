@@ -1,22 +1,28 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Exam Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: students
+    description: Student profile operations
+  - name: exams
+    description: Exam management operations
+  - name: attempts
+    description: Exam attempt operations
+  - name: grading
+    description: AI grading operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +30,284 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /students/profile:
+    get:
+      operationId: getStudentProfile
+      tags: [students]
+      summary: Get student profile by Firebase UID
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createStudentProfile
+      tags: [students]
+      summary: Create or update student profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudentBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /students/stats:
+    get:
+      operationId: getStudentStats
+      tags: [students]
+      summary: Get student dashboard stats
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentStats"
+
+  /exams:
+    get:
+      operationId: listExams
+      tags: [exams]
+      summary: List all exams
+      responses:
+        "200":
+          description: List of exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exam"
+    post:
+      operationId: createExam
+      tags: [exams]
+      summary: Create a new exam (teacher)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExamBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exam"
+
+  /exams/{id}:
+    get:
+      operationId: getExam
+      tags: [exams]
+      summary: Get exam with questions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exam detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamWithQuestions"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /exams/available:
+    get:
+      operationId: getAvailableExams
+      tags: [exams]
+      summary: Get exams not yet attempted by student
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exam"
+
+  /attempts:
+    get:
+      operationId: listAttempts
+      tags: [attempts]
+      summary: Get all attempts for a student
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attempt"
+    post:
+      operationId: startAttempt
+      tags: [attempts]
+      summary: Start an exam attempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartAttemptBody"
+      responses:
+        "201":
+          description: Attempt started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attempt"
+
+  /attempts/{id}:
+    get:
+      operationId: getAttempt
+      tags: [attempts]
+      summary: Get attempt detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attempt detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptWithAnswers"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /attempts/{id}/save-answer:
+    post:
+      operationId: saveAnswer
+      tags: [attempts]
+      summary: Save/update an answer during exam
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveAnswerBody"
+      responses:
+        "200":
+          description: Answer saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+
+  /attempts/{id}/submit:
+    post:
+      operationId: submitAttempt
+      tags: [attempts]
+      summary: Submit exam and trigger grading
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAttemptBody"
+      responses:
+        "200":
+          description: Submitted and graded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+
+  /attempts/{id}/violation:
+    post:
+      operationId: logViolation
+      tags: [attempts]
+      summary: Log a proctoring violation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogViolationBody"
+      responses:
+        "200":
+          description: Violation logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViolationResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +315,328 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+        firebaseUid:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+        college:
+          type: string
+        department:
+          type: string
+        rollNumber:
+          type: string
+        createdAt:
+          type: string
+      required: [id, firebaseUid, email, college, department, rollNumber, createdAt]
+
+    CreateStudentBody:
+      type: object
+      properties:
+        firebaseUid:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+        college:
+          type: string
+        department:
+          type: string
+        rollNumber:
+          type: string
+      required: [firebaseUid, email, college, department, rollNumber]
+
+    StudentStats:
+      type: object
+      properties:
+        totalAttempts:
+          type: integer
+        averageScore:
+          type: number
+        highestScore:
+          type: number
+        totalViolations:
+          type: integer
+        completedExams:
+          type: integer
+      required: [totalAttempts, averageScore, highestScore, totalViolations, completedExams]
+
+    Exam:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        subject:
+          type: string
+        durationMinutes:
+          type: integer
+        totalMarks:
+          type: integer
+        violationLimit:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, title, subject, durationMinutes, totalMarks, violationLimit, createdAt]
+
+    CreateExamBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        subject:
+          type: string
+        durationMinutes:
+          type: integer
+        totalMarks:
+          type: integer
+        violationLimit:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateQuestionBody"
+      required: [title, subject, durationMinutes, totalMarks, violationLimit, questions]
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        examId:
+          type: integer
+        questionText:
+          type: string
+        questionType:
+          type: string
+          enum: [mcq, paragraph]
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
+        correctAnswer:
+          type: ["string", "null"]
+        marks:
+          type: integer
+        rubric:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+      required: [id, examId, questionText, questionType, marks, orderIndex]
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        questionText:
+          type: string
+        questionType:
+          type: string
+          enum: [mcq, paragraph]
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
+        correctAnswer:
+          type: ["string", "null"]
+        marks:
+          type: integer
+        rubric:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+      required: [questionText, questionType, marks, orderIndex]
+
+    ExamWithQuestions:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        subject:
+          type: string
+        durationMinutes:
+          type: integer
+        totalMarks:
+          type: integer
+        violationLimit:
+          type: integer
+        createdAt:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+      required: [id, title, subject, durationMinutes, totalMarks, violationLimit, createdAt, questions]
+
+    Attempt:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        examId:
+          type: integer
+        status:
+          type: string
+          enum: [in_progress, submitted, security_fail]
+        startedAt:
+          type: string
+        submittedAt:
+          type: ["string", "null"]
+        score:
+          type: ["number", "null"]
+        violationCount:
+          type: integer
+        examTitle:
+          type: ["string", "null"]
+        examSubject:
+          type: ["string", "null"]
+        totalMarks:
+          type: ["integer", "null"]
+      required: [id, studentId, examId, status, startedAt, violationCount]
+
+    StartAttemptBody:
+      type: object
+      properties:
+        firebaseUid:
+          type: string
+        examId:
+          type: integer
+      required: [firebaseUid, examId]
+
+    Answer:
+      type: object
+      properties:
+        id:
+          type: integer
+        attemptId:
+          type: integer
+        questionId:
+          type: integer
+        answerText:
+          type: ["string", "null"]
+        isCorrect:
+          type: ["boolean", "null"]
+        marksAwarded:
+          type: ["number", "null"]
+      required: [id, attemptId, questionId]
+
+    SaveAnswerBody:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        answerText:
+          type: string
+      required: [questionId, answerText]
+
+    AttemptWithAnswers:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        examId:
+          type: integer
+        status:
+          type: string
+        startedAt:
+          type: string
+        submittedAt:
+          type: ["string", "null"]
+        score:
+          type: ["number", "null"]
+        violationCount:
+          type: integer
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Answer"
+      required: [id, studentId, examId, status, startedAt, violationCount, answers]
+
+    SubmitAttemptBody:
+      type: object
+      properties:
+        firebaseUid:
+          type: string
+        timeTakenSeconds:
+          type: integer
+      required: [firebaseUid, timeTakenSeconds]
+
+    AttemptResult:
+      type: object
+      properties:
+        attemptId:
+          type: integer
+        score:
+          type: number
+        totalMarks:
+          type: integer
+        percentage:
+          type: number
+        violationCount:
+          type: integer
+        status:
+          type: string
+        gradingDetails:
+          type: array
+          items:
+            $ref: "#/components/schemas/GradingDetail"
+      required: [attemptId, score, totalMarks, percentage, violationCount, status, gradingDetails]
+
+    GradingDetail:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        marksAwarded:
+          type: number
+        maxMarks:
+          type: integer
+        isCorrect:
+          type: ["boolean", "null"]
+        aiFeedback:
+          type: ["string", "null"]
+      required: [questionId, marksAwarded, maxMarks]
+
+    LogViolationBody:
+      type: object
+      properties:
+        violationType:
+          type: string
+      required: [violationType]
+
+    ViolationResponse:
+      type: object
+      properties:
+        violationCount:
+          type: integer
+        shouldTerminate:
+          type: boolean
+      required: [violationCount, shouldTerminate]
