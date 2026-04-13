@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useCreateStudentProfile } from "@workspace/api-client-react";
+import { useCreateProfile } from "@/hooks/useProfile";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,135 +23,123 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const createProfile = useCreateStudentProfile();
+  const createProfile = useCreateProfile();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      college: "",
-      department: "",
-      rollNumber: "",
-    },
+    defaultValues: { college: "", department: "", rollNumber: "" },
   });
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      setLocation("/");
-    }
+    if (!authLoading && !user) setLocation("/");
   }, [user, authLoading, setLocation]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (!user) return;
-    
     createProfile.mutate({
-      data: {
-        firebaseUid: user.uid,
-        email: user.email!,
-        displayName: user.displayName || undefined,
-        ...values,
-      }
+      id: user.uid,
+      email: user.email!,
+      display_name: user.displayName || null,
+      college: values.college,
+      department: values.department,
+      roll_number: values.rollNumber,
     }, {
       onSuccess: () => {
-        toast({
-          title: "Registration Complete",
-          description: "Welcome to ExamPortal.",
-        });
+        toast({ title: "Registration Complete", description: "Welcome to ExamPortal." });
         setLocation("/dashboard");
       },
-      onError: () => {
+      onError: (err) => {
+        console.error(err);
         toast({
           variant: "destructive",
           title: "Registration Failed",
           description: "Could not create student profile. Please try again.",
         });
-      }
+      },
     });
   };
 
-  if (authLoading || !user) {
-    return null;
-  }
+  if (authLoading || !user) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary rounded-full blur-[120px] mix-blend-screen opacity-10" />
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary rounded-full blur-[150px] opacity-[0.04]" />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-md z-10"
+        transition={{ duration: 0.45, ease: "easeOut" }}
+        className="w-full max-w-sm z-10"
       >
-        <Card className="border-border bg-card/80 backdrop-blur-xl shadow-2xl">
-          <CardHeader className="space-y-2 pb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+        <Card className="border-border bg-card/90 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="space-y-2 pb-5">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                 <Shield className="w-5 h-5 text-primary" />
               </div>
-              <CardTitle className="text-2xl font-semibold tracking-tight">Identity Verification</CardTitle>
+              <div>
+                <CardTitle className="text-xl font-bold tracking-tight">Identity Verification</CardTitle>
+                <CardDescription className="text-xs mt-0.5">Complete your academic profile to continue</CardDescription>
+              </div>
             </div>
-            <CardDescription className="text-muted-foreground text-sm">
-              Please complete your academic profile to proceed to the secure portal.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                <div className="space-y-4">
-                  <div className="p-3 bg-muted rounded-md border border-border">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-mono">Authenticated As</p>
-                    <p className="text-sm font-medium text-foreground">{user.email}</p>
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="college"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-muted-foreground">Institution / College Name</FormLabel>
-                        <FormControl>
-                          <Input className="bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/50" placeholder="e.g. University of Science" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-muted-foreground">Department / Major</FormLabel>
-                        <FormControl>
-                          <Input className="bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/50" placeholder="e.g. Computer Science" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="rollNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-muted-foreground">Student ID / Roll Number</FormLabel>
-                        <FormControl>
-                          <Input className="bg-background/50 border-muted-foreground/20 focus-visible:ring-primary/50 font-mono" placeholder="e.g. CS-2024-001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="p-3 bg-muted rounded-lg border border-border">
+                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-mono">Authenticated As</p>
+                  <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
                 </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full mt-6"
-                  disabled={createProfile.isPending}
-                >
-                  {createProfile.isPending ? "Verifying..." : "Complete Registration"}
+
+                <FormField
+                  control={form.control}
+                  name="college"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider">Institution / College</FormLabel>
+                      <FormControl>
+                        <Input className="bg-background" placeholder="e.g. University of Science" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider">Department / Major</FormLabel>
+                      <FormControl>
+                        <Input className="bg-background" placeholder="e.g. Computer Science" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="rollNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider">Student ID / Roll Number</FormLabel>
+                      <FormControl>
+                        <Input className="bg-background font-mono" placeholder="e.g. CS-2024-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button type="submit" className="w-full mt-2" disabled={createProfile.isPending}>
+                  {createProfile.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </div>
+                  ) : "Complete Registration"}
                 </Button>
               </form>
             </Form>

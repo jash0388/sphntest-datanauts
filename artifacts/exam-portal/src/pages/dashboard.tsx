@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { 
-  useGetStudentStats, 
-  useGetAvailableExams, 
-  useListAttempts,
-  useStartAttempt
-} from "@workspace/api-client-react";
+import { useProfile } from "@/hooks/useProfile";
+import { useAvailableExams, useMySubmissions, useMyStats } from "@/hooks/useExamData";
 import { signOut, auth } from "@/lib/firebase";
 import { LogOut, Activity, Target, ShieldAlert, Award, FileText, Clock, PlayCircle, Shield, History, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,14 +15,12 @@ import { format } from "date-fns";
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [startingExam, setStartingExam] = useState<number | null>(null);
+  const [startingExam, setStartingExam] = useState<string | null>(null);
 
-  const startAttemptMutation = useStartAttempt();
-  const uid = user?.uid ?? "";
-
-  const { data: stats } = useGetStudentStats({ uid }, { query: { enabled: !!uid } });
-  const { data: availableExams } = useGetAvailableExams({ uid }, { query: { enabled: !!uid } });
-  const { data: attempts } = useListAttempts({ uid }, { query: { enabled: !!uid } });
+  const { data: profile } = useProfile(user?.uid);
+  const { data: exams } = useAvailableExams();
+  const { data: submissions } = useMySubmissions(user?.uid);
+  const { data: stats } = useMyStats(user?.uid);
 
   useEffect(() => {
     if (!authLoading && !user) setLocation("/");
@@ -37,15 +31,9 @@ export default function Dashboard() {
     setLocation("/");
   };
 
-  const handleStartExam = (examId: number) => {
-    if (!user) return;
+  const handleStartExam = (examId: string) => {
     setStartingExam(examId);
-    startAttemptMutation.mutate({
-      data: { firebaseUid: user.uid, examId }
-    }, {
-      onSuccess: (attempt) => setLocation(`/exam/${attempt.examId}`),
-      onSettled: () => setStartingExam(null)
-    });
+    setLocation(`/exam/${examId}`);
   };
 
   const container = {
@@ -61,7 +49,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container max-w-6xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -69,10 +56,13 @@ export default function Dashboard() {
             <span className="font-semibold tracking-tight text-sm sm:text-base">ExamPortal</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <span className="text-xs text-muted-foreground hidden sm:inline-block truncate max-w-[200px]">{user.email}</span>
+            <div className="hidden sm:block text-right min-w-0">
+              <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</p>
+              {profile && <p className="text-xs text-foreground font-medium truncate max-w-[180px]">{profile.college}</p>}
+            </div>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground shrink-0 px-2 sm:px-3">
               <LogOut className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Disconnect</span>
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
@@ -80,103 +70,74 @@ export default function Dashboard() {
 
       <main className="container max-w-6xl mx-auto px-4 mt-6 sm:mt-8">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 sm:space-y-10">
-          
-          {/* Stats Row */}
+
+          {/* Stats */}
           <motion.div variants={item}>
             <h2 className="text-base sm:text-xl font-medium tracking-tight mb-3 sm:mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Telemetry
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Overview
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="bg-card/50 border-border">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between text-muted-foreground mb-3">
-                    <span className="text-xs sm:text-sm font-medium">Exams Taken</span>
-                    <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold">{stats?.totalAttempts ?? 0}</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card/50 border-border">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between text-muted-foreground mb-3">
-                    <span className="text-xs sm:text-sm font-medium">Avg. Score</span>
-                    <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold">
-                    {stats?.averageScore != null ? `${Math.round(stats.averageScore)}%` : '--'}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card/50 border-border">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between text-muted-foreground mb-3">
-                    <span className="text-xs sm:text-sm font-medium">High Score</span>
-                    <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-primary">
-                    {stats?.highestScore != null ? `${Math.round(stats.highestScore)}%` : '--'}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card/50 border-destructive/20 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-12 h-12 bg-destructive/10 rounded-bl-full pointer-events-none" />
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between text-destructive/80 mb-3">
-                    <span className="text-xs sm:text-sm font-medium">Violations</span>
-                    <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-destructive">{stats?.totalViolations ?? 0}</div>
-                </CardContent>
-              </Card>
+              {[
+                { label: "Exams Taken", value: stats?.totalAttempts ?? 0, icon: <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
+                { label: "Avg. Score", value: stats?.averageScore != null ? `${Math.round(stats.averageScore)}%` : "--", icon: <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> },
+                { label: "High Score", value: stats?.highestScore != null ? `${Math.round(stats.highestScore)}%` : "--", icon: <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />, accent: true },
+                { label: "Violations", value: stats?.totalViolations ?? 0, icon: <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" />, danger: true },
+              ].map((stat) => (
+                <Card key={stat.label} className={`bg-card/50 ${stat.danger ? "border-destructive/20" : "border-border"} relative overflow-hidden`}>
+                  {stat.danger && <div className="absolute top-0 right-0 w-12 h-12 bg-destructive/10 rounded-bl-full pointer-events-none" />}
+                  <CardContent className="p-4 sm:p-6">
+                    <div className={`flex items-center justify-between mb-3 ${stat.danger ? "text-destructive/80" : "text-muted-foreground"}`}>
+                      <span className="text-xs sm:text-sm font-medium">{stat.label}</span>
+                      {stat.icon}
+                    </div>
+                    <div className={`text-2xl sm:text-3xl font-bold ${stat.danger ? "text-destructive" : stat.accent ? "text-primary" : ""}`}>
+                      {stat.value}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-            
+
             {/* Available Exams */}
             <motion.div variants={item} className="lg:col-span-2 space-y-3 sm:space-y-4">
               <h2 className="text-base sm:text-xl font-medium tracking-tight flex items-center gap-2">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Active Deployments
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Available Exams
               </h2>
-              {availableExams && availableExams.length > 0 ? (
+              {exams && exams.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {availableExams.map(exam => (
+                  {exams.map((exam) => (
                     <Card key={exam.id} className="bg-card hover:bg-card/80 transition-colors border-border flex flex-col group relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover:bg-primary transition-colors" />
                       <CardHeader className="pb-3 pl-5">
                         <div className="flex justify-between items-start mb-2">
-                          <Badge variant="outline" className="text-xs uppercase tracking-wider font-mono bg-background">
-                            {exam.subject}
-                          </Badge>
+                          <Badge variant="outline" className="text-xs font-mono bg-background">EXAM</Badge>
                           <div className="flex items-center text-xs text-muted-foreground font-mono">
                             <Clock className="w-3 h-3 mr-1" />
-                            {exam.durationMinutes}m
+                            {exam.duration_minutes}m
                           </div>
                         </div>
                         <CardTitle className="text-base sm:text-lg leading-tight">{exam.title}</CardTitle>
                         <CardDescription className="text-xs sm:text-sm line-clamp-2">
-                          {exam.description || 'No description provided.'}
+                          {exam.description || "No description provided."}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pb-3 mt-auto pl-5">
-                        <div className="flex items-center justify-between text-xs sm:text-sm">
-                          <span className="text-muted-foreground">
-                            Marks: <span className="text-foreground font-medium">{exam.totalMarks}</span>
-                          </span>
-                          <span className="text-muted-foreground flex items-center">
-                            <AlertTriangle className="w-3 h-3 mr-1 text-destructive/70" />
-                            {exam.violationLimit} violations
-                          </span>
+                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <AlertTriangle className="w-3 h-3 mr-1 text-destructive/70" />
+                          Max violations: <span className="text-foreground font-medium ml-1">{exam.max_violations}</span>
                         </div>
                       </CardContent>
                       <CardFooter className="pl-5">
-                        <Button 
+                        <Button
                           className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 text-sm"
                           onClick={() => handleStartExam(exam.id)}
                           disabled={startingExam === exam.id}
                         >
                           <PlayCircle className="w-4 h-4 mr-2" />
-                          {startingExam === exam.id ? 'Initializing...' : 'Initialize Exam'}
+                          {startingExam === exam.id ? "Starting..." : "Start Exam"}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -186,72 +147,62 @@ export default function Dashboard() {
                 <Card className="bg-background border-dashed border-border/50">
                   <CardContent className="p-8 text-center text-muted-foreground">
                     <Shield className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">No active deployments available.</p>
+                    <p className="text-sm">No active exams available.</p>
                   </CardContent>
                 </Card>
               )}
             </motion.div>
 
-            {/* Attempt Log */}
+            {/* Submission History */}
             <motion.div variants={item} className="space-y-3 sm:space-y-4">
               <h2 className="text-base sm:text-xl font-medium tracking-tight flex items-center gap-2">
-                <History className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Attempt Log
+                <History className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> History
               </h2>
               <Card className="bg-card/50 border-border">
-                <ScrollArea className="h-[320px] sm:h-[400px]">
-                  {attempts && attempts.length > 0 ? (
+                <ScrollArea className="h-[300px] sm:h-[380px]">
+                  {submissions && submissions.length > 0 ? (
                     <div className="divide-y divide-border/50">
-                      {attempts.map(attempt => (
-                        <div key={attempt.id} className="p-4 hover:bg-muted/30 transition-colors">
-                          <div className="flex justify-between items-start gap-2 mb-1">
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm leading-tight mb-1 truncate">{attempt.examTitle}</p>
-                              <p className="text-xs text-muted-foreground font-mono">
-                                {format(new Date(attempt.startedAt), 'MMM d, yyyy HH:mm')}
-                              </p>
+                      {submissions.map((sub) => {
+                        const pct = sub.total_marks ? Math.round((sub.score / sub.total_marks) * 100) : 0;
+                        return (
+                          <div key={sub.id} className="p-4 hover:bg-muted/30 transition-colors">
+                            <div className="flex justify-between items-start gap-2 mb-1">
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm leading-tight mb-0.5 truncate">
+                                  {sub.exams?.title ?? "Exam"}
+                                </p>
+                                <p className="text-xs text-muted-foreground font-mono">
+                                  {format(new Date(sub.submitted_at), "MMM d, yyyy HH:mm")}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                {sub.status === "completed" ? (
+                                  <span className={`font-bold text-sm ${pct >= 50 ? "text-primary" : "text-destructive"}`}>{pct}%</span>
+                                ) : sub.status === "terminated" ? (
+                                  <Badge variant="destructive" className="text-[10px]">TERMINATED</Badge>
+                                ) : null}
+                              </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              {attempt.status === 'submitted' && attempt.score != null ? (
-                                <span className="font-bold text-primary text-sm">
-                                  {Math.round((attempt.score / (attempt.totalMarks || 1)) * 100)}%
-                                </span>
-                              ) : attempt.status === 'in_progress' ? (
-                                <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 text-[10px]">LIVE</Badge>
-                              ) : attempt.status === 'security_fail' ? (
-                                <Badge variant="destructive" className="text-[10px]">BREACHED</Badge>
-                              ) : null}
-                            </div>
-                          </div>
-                          {attempt.violationCount > 0 && (
-                            <div className="flex items-center text-[10px] text-destructive uppercase font-mono tracking-wider mt-1">
-                              <ShieldAlert className="w-3 h-3 mr-1" />
-                              {attempt.violationCount} violations
-                            </div>
-                          )}
-                          {attempt.status === 'submitted' && (
-                            <Button 
+                            {sub.violations > 0 && (
+                              <div className="flex items-center text-[10px] text-destructive font-mono mt-1">
+                                <ShieldAlert className="w-3 h-3 mr-1" />
+                                {sub.violations} violations
+                              </div>
+                            )}
+                            <Button
                               variant="link" size="sm"
                               className="px-0 h-auto mt-1 text-xs text-muted-foreground hover:text-primary"
-                              onClick={() => setLocation(`/result/${attempt.id}`)}
+                              onClick={() => setLocation(`/result/${sub.id}`)}
                             >
                               View Report →
                             </Button>
-                          )}
-                          {attempt.status === 'in_progress' && (
-                            <Button 
-                              variant="link" size="sm"
-                              className="px-0 h-auto mt-1 text-xs text-blue-500 hover:text-blue-400"
-                              onClick={() => setLocation(`/exam/${attempt.examId}`)}
-                            >
-                              Resume →
-                            </Button>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="p-8 text-center text-muted-foreground text-sm">
-                      No logs found.
+                      No submissions yet.
                     </div>
                   )}
                 </ScrollArea>

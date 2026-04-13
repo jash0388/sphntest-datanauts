@@ -8,7 +8,7 @@ import {
   createUserWithEmailAndPassword,
 } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { useGetStudentProfile } from "@workspace/api-client-react";
+import { useProfile } from "@/hooks/useProfile";
 import { Shield, AlertCircle, Eye, EyeOff, Mail, Lock, ArrowLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ type Step = "credentials" | "otp";
 function getFirebaseError(code: string): string {
   switch (code) {
     case "auth/unauthorized-domain":
-      return "Domain not authorized in Firebase. Add it to Firebase Console → Authentication → Authorized domains.";
+      return "Domain not authorized. Add it to Firebase Console → Authentication → Authorized domains.";
     case "auth/user-not-found":
     case "auth/invalid-credential":
       return "Invalid email or password.";
@@ -57,10 +57,7 @@ export default function Login() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const { data: profile, isLoading: profileLoading } = useGetStudentProfile(
-    { uid: user?.uid ?? "" },
-    { query: { enabled: !!user?.uid, queryKey: ["studentProfile", user?.uid ?? ""] } }
-  );
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.uid);
 
   useEffect(() => {
     if (user && !profileLoading) {
@@ -74,31 +71,25 @@ export default function Login() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
-  const getApiUrl = (path: string) => `/api${path}`;
-
   const sendOtp = async (targetEmail: string) => {
-    const res = await fetch(getApiUrl("/auth/send-otp"), {
+    const res = await fetch(`/api/auth/send-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: targetEmail }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to send OTP");
-    if (data.previewUrl) {
-      console.info("[DEV] OTP email preview:", data.previewUrl);
-    }
+    if (data.previewUrl) console.info("[DEV] OTP email preview:", data.previewUrl);
     return data;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-
     if (!email.endsWith("@gmail.com")) {
       toast({ variant: "destructive", title: "Access Denied", description: "Only @gmail.com accounts are permitted." });
       return;
     }
-
     setIsLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
@@ -108,8 +99,7 @@ export default function Login() {
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
-      const message = code ? getFirebaseError(code) : (err as Error).message;
-      toast({ variant: "destructive", title: "Sign Up Failed", description: message });
+      toast({ variant: "destructive", title: "Sign Up Failed", description: code ? getFirebaseError(code) : (err as Error).message });
     } finally {
       setIsLoading(false);
     }
@@ -132,17 +122,16 @@ export default function Login() {
   const handleVerifyOtp = async () => {
     const code = otp.join("");
     if (code.length < 6) return;
-
     setIsLoading(true);
     try {
-      const res = await fetch(getApiUrl("/auth/verify-otp"), {
+      const res = await fetch(`/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: code }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invalid OTP");
-      toast({ title: "Email Verified", description: "Your account is verified. Setting up your profile..." });
+      toast({ title: "Email Verified", description: "Account verified. Setting up your profile..." });
     } catch (err: unknown) {
       toast({ variant: "destructive", title: "Verification Failed", description: (err as Error).message });
       setOtp(["", "", "", "", "", ""]);
@@ -158,23 +147,16 @@ export default function Login() {
     next[index] = digit;
     setOtp(next);
     if (digit && index < 5) otpRefs.current[index + 1]?.focus();
-    if (next.every((d) => d !== "")) {
-      setTimeout(() => handleVerifyOtp(), 50);
-    }
+    if (next.every((d) => d !== "")) setTimeout(() => handleVerifyOtp(), 50);
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
+    if (e.key === "Backspace" && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus();
   };
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 6) {
-      setOtp(pasted.split(""));
-      setTimeout(() => handleVerifyOtp(), 50);
-    }
+    if (pasted.length === 6) { setOtp(pasted.split("")); setTimeout(() => handleVerifyOtp(), 50); }
   };
 
   const handleResend = async () => {
@@ -187,7 +169,7 @@ export default function Login() {
       otpRefs.current[0]?.focus();
       toast({ title: "OTP Resent", description: "A new code has been sent to your email." });
     } catch (err: unknown) {
-      toast({ variant: "destructive", title: "Failed to resend", description: (err as Error).message });
+      toast({ variant: "destructive", title: "Failed", description: (err as Error).message });
     } finally {
       setIsLoading(false);
     }
@@ -243,20 +225,15 @@ export default function Login() {
                 </div>
                 <div>
                   <CardTitle className="text-2xl font-bold tracking-tight">ExamPortal</CardTitle>
-                  <CardDescription className="text-muted-foreground mt-1 text-sm">
-                    Secure Academic Assessment
-                  </CardDescription>
+                  <CardDescription className="mt-1 text-sm">Secure Academic Assessment</CardDescription>
                 </div>
-
                 <div className="flex rounded-lg border border-border bg-muted/30 p-1 gap-1">
                   {(["signin", "signup"] as Mode[]).map((m) => (
                     <button
                       key={m}
                       onClick={() => setMode(m)}
                       className={`flex-1 py-1.5 rounded text-sm font-medium transition-all ${
-                        mode === m
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                        mode === m ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {m === "signin" ? "Sign In" : "Sign Up"}
@@ -271,47 +248,21 @@ export default function Login() {
                     <Label htmlFor="email" className="text-xs text-muted-foreground uppercase tracking-wider">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@gmail.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-9 bg-background"
-                        required
-                        autoComplete="email"
-                      />
+                      <Input id="email" type="email" placeholder="you@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9 bg-background" required autoComplete="email" />
                     </div>
                   </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor="password" className="text-xs text-muted-foreground uppercase tracking-wider">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-9 pr-9 bg-background"
-                        required
-                        autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
+                      <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-9 pr-9 bg-background" required autoComplete={mode === "signup" ? "new-password" : "current-password"} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
-
                   <Button type="submit" size="lg" className="w-full h-11" disabled={isLoading}>
-                    {isLoading ? (
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : mode === "signin" ? "Sign In" : "Continue"}
+                    {isLoading ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : mode === "signin" ? "Sign In" : "Continue"}
                   </Button>
                 </form>
 
@@ -321,13 +272,7 @@ export default function Login() {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full h-11 border-border hover:border-primary/40"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" size="lg" className="w-full h-11 border-border hover:border-primary/40" onClick={handleGoogleSignIn} disabled={isLoading}>
                   <svg className="w-4 h-4 mr-2 shrink-0" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -362,62 +307,37 @@ export default function Login() {
                 </div>
                 <div>
                   <CardTitle className="text-xl font-bold">Check your email</CardTitle>
-                  <CardDescription className="text-muted-foreground mt-1 text-sm">
-                    We sent a 6-digit code to
-                  </CardDescription>
+                  <CardDescription className="mt-1 text-sm">We sent a 6-digit code to</CardDescription>
                   <p className="text-sm font-medium text-foreground mt-0.5 truncate px-4">{email}</p>
                 </div>
               </CardHeader>
-
               <CardContent className="space-y-6">
                 <div className="flex justify-center gap-2">
                   {otp.map((digit, i) => (
                     <input
                       key={i}
                       ref={(el) => { otpRefs.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
+                      type="text" inputMode="numeric" maxLength={1} value={digit}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
                       onPaste={i === 0 ? handleOtpPaste : undefined}
-                      className={`w-11 h-14 text-center text-xl font-bold rounded-lg border bg-background outline-none transition-all
-                        ${digit ? "border-primary text-primary" : "border-border text-foreground"}
-                        focus:border-primary focus:ring-2 focus:ring-primary/20`}
+                      className={`w-11 h-14 text-center text-xl font-bold rounded-lg border bg-background outline-none transition-all ${digit ? "border-primary text-primary" : "border-border"} focus:border-primary focus:ring-2 focus:ring-primary/20`}
                     />
                   ))}
                 </div>
-
-                {isLoading && (
-                  <div className="flex justify-center">
-                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
-
+                {isLoading && <div className="flex justify-center"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}
                 <div className="space-y-2 text-center">
                   <p className="text-xs text-muted-foreground">Didn't receive it?</p>
-                  <button
-                    onClick={handleResend}
-                    disabled={resendCooldown > 0 || isLoading}
-                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center gap-1.5 mx-auto"
-                  >
+                  <button onClick={handleResend} disabled={resendCooldown > 0 || isLoading} className="text-sm font-medium text-primary hover:text-primary/80 transition-colors disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center gap-1.5 mx-auto">
                     <RefreshCw className="w-3.5 h-3.5" />
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
                   </button>
                 </div>
-
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/40 border border-border">
                   <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Code expires in <span className="text-foreground">10 minutes</span>. Check your spam folder if you don't see it.
-                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Code expires in <span className="text-foreground">10 minutes</span>. Check your spam folder if you don't see it.</p>
                 </div>
-
-                <button
-                  onClick={() => { setStep("credentials"); setOtp(["", "", "", "", "", ""]); }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto"
-                >
+                <button onClick={() => { setStep("credentials"); setOtp(["", "", "", "", "", ""]); }} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto">
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Back to sign up
                 </button>
