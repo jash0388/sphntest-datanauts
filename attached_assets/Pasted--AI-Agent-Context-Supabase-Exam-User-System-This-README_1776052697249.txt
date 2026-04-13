@@ -86,8 +86,8 @@ VITE_FIREBASE_APP_ID=1:206057381692:web:0969ea6ef357595e74c839
 VITE_FIREBASE_MEASUREMENT_ID=G-R94DP41Q53
 
 # AI & LLM Context
-VITE_GEMINI_API_KEY=AIzaSyByvtqmSfAQ-YB5YO1EXn_yXepau8sq8M0
-VITE_GROQ_API_KEY=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
+VITE_GEMINI_API_KEY=AIzaSyBy... (HIDDEN)
+VITE_GROQ_API_KEY=gsk_... (HIDDEN)
 
 # Media Config (Cloudinary)
 # Replace with your Cloudinary credentials if performing uploads
