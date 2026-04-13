@@ -71,11 +71,28 @@ export function useSubmission(submissionId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_submissions")
-        .select("*, exams(title, total_marks)")
-        .eq("id", submissionId)
+        .select("*, exams(title)")
+        .eq("id", submissionId!)
         .single();
       if (error) throw error;
-      return data as SupabaseSubmission & { exams: { title: string; total_marks?: number } | null };
+      return data as SupabaseSubmission & { exams: { title: string } | null };
+    },
+  });
+}
+
+export function useHasSubmitted(userId: string | undefined, examId: string | undefined) {
+  return useQuery({
+    queryKey: ["has_submitted", userId, examId],
+    enabled: !!userId && !!examId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_submissions")
+        .select("id")
+        .eq("user_id", userId!)
+        .eq("exam_id", examId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data !== null;
     },
   });
 }

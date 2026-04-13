@@ -2,14 +2,17 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { useExam, useExamQuestions, useSubmitExam } from "@/hooks/useExamData";
-import { AlertTriangle, Clock, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { useExam, useExamQuestions, useSubmitExam, useMySubmissions } from "@/hooks/useExamData";
+import { AlertTriangle, Clock, ShieldAlert, CheckCircle2, User, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+
+type ExamPhase = "pre-form" | "instructions" | "in-progress";
 
 export default function ExamTaking() {
   const { examId } = useParams<{ examId: string }>();
@@ -17,6 +20,12 @@ export default function ExamTaking() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile } = useProfile(user?.uid);
   const { toast } = useToast();
+
+  const [phase, setPhase] = useState<ExamPhase>("pre-form");
+  const [studentName, setStudentName] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [rollError, setRollError] = useState("");
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [breachOverlay, setBreachOverlay] = useState(false);
@@ -28,17 +37,34 @@ export default function ExamTaking() {
 
   const { data: exam, isLoading: examLoading } = useExam(examId);
   const { data: questions, isLoading: questionsLoading } = useExamQuestions(examId);
+  const { data: mySubmissions, isLoading: submissionsLoading } = useMySubmissions(user?.uid);
+
+  // Redirect if already submitted this exam
+  useEffect(() => {
+    if (!mySubmissions || !examId) return;
+    const existing = mySubmissions.find((s) => s.exam_id === examId);
+    if (existing) setLocation(`/result/${existing.id}`);
+  }, [mySubmissions, examId, setLocation]);
+
+  // Pre-fill from profile
+  useEffect(() => {
+    if (profile) {
+      if (profile.display_name) setStudentName(profile.display_name);
+      else if (user?.displayName) setStudentName(user.displayName);
+      if (profile.roll_number) setRollNumber(profile.roll_number);
+    }
+  }, [profile, user]);
 
   useEffect(() => {
     if (!authLoading && !user) setLocation("/");
   }, [user, authLoading, setLocation]);
 
-  // Start timer once exam loads
+  // Start timer once exam loads and we enter in-progress
   useEffect(() => {
-    if (exam && timeLeft === null) {
+    if (exam && phase === "in-progress" && timeLeft === null) {
       setTimeLeft(exam.duration_minutes * 60);
     }
-  }, [exam, timeLeft]);
+  }, [exam, phase, timeLeft]);
 
   const handleSubmitExam = useCallback(
     (forced = false) => {
@@ -48,7 +74,6 @@ export default function ExamTaking() {
       let score = 0;
       const totalMarks = questions.reduce((s, q) => s + q.marks, 0);
 
-      // Auto-grade MCQ questions
       for (const q of questions) {
         if (q.question_type === "mcq" && q.correct_answer) {
           const given = answers[q.id];
@@ -56,12 +81,7 @@ export default function ExamTaking() {
             score += q.marks;
           }
         }
-        // Paragraph questions get 0 (no AI grading client-side)
       }
-
-      const studentName = profile
-        ? `${profile.display_name || user.email} (${user.email})`
-        : user.email ?? "Unknown";
 
       submitExam.mutate({
         user_id: user.uid,
@@ -71,32 +91,33 @@ export default function ExamTaking() {
         violations: violationCount,
         time_used_seconds: timeTaken,
         status: forced ? "terminated" : "completed",
-        student_name: studentName,
-        roll_number: profile?.roll_number ?? "",
+        student_name: studentName || user.email || "Unknown",
+        roll_number: rollNumber,
       }, {
         onSuccess: (sub) => {
           if (document.fullscreenElement) document.exitFullscreen().catch(console.error);
           setLocation(`/result/${sub.id}`);
         },
-        onError: () => {
+        onError: (err) => {
+          console.error("Submit error:", err);
           toast({ variant: "destructive", title: "Submit Failed", description: "Could not submit. Please try again." });
         },
       });
     },
-    [user, exam, questions, answers, profile, violationCount, startTime, submitExam, setLocation, toast]
+    [user, exam, questions, answers, violationCount, startTime, submitExam, setLocation, toast, studentName, rollNumber]
   );
 
   // Timer countdown
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0 || breachOverlay) return;
+    if (phase !== "in-progress" || timeLeft === null || timeLeft <= 0) return;
     if (timeLeft === 0) { handleSubmitExam(false); return; }
     const t = setTimeout(() => setTimeLeft((p) => (p !== null ? p - 1 : null)), 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, breachOverlay]);
+  }, [timeLeft, phase]);
 
-  // Security monitoring
+  // Security monitoring (only during in-progress)
   useEffect(() => {
-    if (!exam) return;
+    if (phase !== "in-progress" || !exam) return;
 
     const handleBreach = () => {
       if (breachOverlay) return;
@@ -132,55 +153,149 @@ export default function ExamTaking() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
     };
-  }, [exam, breachOverlay, violationCount, handleSubmitExam]);
+  }, [phase, exam, breachOverlay, violationCount, handleSubmitExam]);
 
   const handleEnterFullscreen = async () => {
     try {
       await document.documentElement.requestFullscreen();
       setIsFullscreen(true);
-    } catch (err) { console.error(err); }
+      setPhase("in-progress");
+    } catch (err) {
+      console.error(err);
+      // Still proceed even if fullscreen fails (mobile)
+      setPhase("in-progress");
+    }
+  };
+
+  const handlePreFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    let valid = true;
+    if (!studentName.trim()) { setNameError("Full name is required"); valid = false; }
+    else setNameError("");
+    if (!rollNumber.trim()) { setRollError("Roll number is required"); valid = false; }
+    else setRollError("");
+    if (valid) setPhase("instructions");
   };
 
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  const formatTime = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
-  if (authLoading || examLoading || questionsLoading) return <div className="min-h-screen bg-background" />;
-  if (!exam || !questions) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Exam not found.</div>;
+  if (authLoading || examLoading || questionsLoading || submissionsLoading) return <div className="min-h-screen bg-background" />;
+  if (!exam || !questions) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground text-sm">Exam not found.</div>;
 
-  if (!isFullscreen && !breachOverlay) {
+  // ─── Phase 1: Name + Roll Number form ────────────────────────────────────────
+  if (phase === "pre-form") {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <div className="max-w-sm w-full text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mx-auto">
-            <AlertTriangle className="w-8 h-8 text-yellow-500" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight mb-2">{exam.title}</h1>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              This assessment requires fullscreen mode. Exiting fullscreen or switching tabs will log a security violation.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-muted/50 rounded-lg p-3 border border-border text-center">
-              <p className="text-muted-foreground text-xs mb-1">Duration</p>
-              <p className="font-bold">{exam.duration_minutes} min</p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="max-w-sm w-full space-y-6"
+        >
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+              <User className="w-7 h-7 text-primary" />
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 border border-border text-center">
-              <p className="text-muted-foreground text-xs mb-1">Questions</p>
-              <p className="font-bold">{questions.length}</p>
-            </div>
+            <h1 className="text-xl font-bold tracking-tight">{exam.title}</h1>
+            <p className="text-muted-foreground text-sm">Confirm your identity before starting</p>
           </div>
-          <Button size="lg" className="w-full" onClick={handleEnterFullscreen}>
-            Enter Fullscreen & Begin
-          </Button>
-        </div>
+
+          <form onSubmit={handlePreFormSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  className="pl-9 bg-card"
+                  placeholder="Enter your full name"
+                  value={studentName}
+                  onChange={(e) => { setStudentName(e.target.value); setNameError(""); }}
+                />
+              </div>
+              {nameError && <p className="text-xs text-destructive">{nameError}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Roll Number / Student ID</label>
+              <div className="relative">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  className="pl-9 bg-card font-mono"
+                  placeholder="e.g. CS-2024-001"
+                  value={rollNumber}
+                  onChange={(e) => { setRollNumber(e.target.value); setRollError(""); }}
+                />
+              </div>
+              {rollError && <p className="text-xs text-destructive">{rollError}</p>}
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-muted-foreground space-y-1">
+              <p><span className="text-foreground font-medium">Duration:</span> {exam.duration_minutes} minutes</p>
+              <p><span className="text-foreground font-medium">Questions:</span> {questions.length}</p>
+              <p><span className="text-foreground font-medium">Max violations:</span> {exam.max_violations} (auto-terminates)</p>
+            </div>
+
+            <Button type="submit" className="w-full" size="lg">
+              Confirm & Continue
+            </Button>
+            <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation("/dashboard")}>
+              Cancel
+            </Button>
+          </form>
+        </motion.div>
       </div>
     );
   }
 
+  // ─── Phase 2: Instructions + fullscreen prompt ────────────────────────────────
+  if (phase === "instructions") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="max-w-sm w-full text-center space-y-6"
+        >
+          <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8 text-yellow-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold tracking-tight">Ready to Begin?</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              This exam requires fullscreen mode. Exiting fullscreen or switching tabs is logged as a security violation.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            {[
+              { label: "Student", value: studentName },
+              { label: "Roll No.", value: rollNumber },
+              { label: "Duration", value: `${exam.duration_minutes} min` },
+              { label: "Violations", value: `0 / ${exam.max_violations}` },
+            ].map((item) => (
+              <div key={item.label} className="bg-muted/50 rounded-lg p-3 border border-border text-left">
+                <p className="text-muted-foreground text-xs mb-0.5">{item.label}</p>
+                <p className="font-medium text-sm truncate">{item.value}</p>
+              </div>
+            ))}
+          </div>
+          <Button size="lg" className="w-full" onClick={handleEnterFullscreen}>
+            Enter Fullscreen & Begin
+          </Button>
+          <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setPhase("pre-form")}>
+            Edit details
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ─── Phase 3: Exam in progress ────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col cursor-default select-none">
       <AnimatePresence>
@@ -201,7 +316,7 @@ export default function ExamTaking() {
         )}
       </AnimatePresence>
 
-      {/* Mobile header — two rows */}
+      {/* Mobile header */}
       <header className="sticky top-0 z-40 bg-card border-b border-border/50 select-none">
         <div className="flex sm:hidden items-center justify-between px-4 pt-3 pb-2">
           <span className="font-bold text-sm truncate max-w-[55%]">{exam.title}</span>
@@ -264,7 +379,11 @@ export default function ExamTaking() {
                 </div>
 
                 {q.question_type === "mcq" && q.options && (
-                  <RadioGroup className="space-y-2 mt-3" value={answers[q.id]} onValueChange={(val) => handleAnswerChange(q.id, val)}>
+                  <RadioGroup
+                    className="space-y-2 mt-3"
+                    value={answers[q.id] || ""}
+                    onValueChange={(val) => handleAnswerChange(q.id, val)}
+                  >
                     {q.options.map((opt, i) => (
                       <div
                         key={i}
@@ -280,7 +399,7 @@ export default function ExamTaking() {
 
                 {(q.question_type === "paragraph" || q.question_type === "code") && (
                   <Textarea
-                    className="min-h-[140px] sm:min-h-[180px] mt-3 bg-card border-border/50 focus-visible:ring-primary text-sm sm:text-base leading-relaxed font-sans resize-y"
+                    className="min-h-[140px] sm:min-h-[180px] mt-3 bg-card border-border/50 focus-visible:ring-primary text-sm sm:text-base leading-relaxed resize-y"
                     placeholder={q.question_type === "code" ? "Write your code here..." : "Enter your answer here..."}
                     value={answers[q.id] || ""}
                     onChange={(e) => handleAnswerChange(q.id, e.target.value)}

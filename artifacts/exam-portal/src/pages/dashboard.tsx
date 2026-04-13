@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useAvailableExams, useMySubmissions, useMyStats } from "@/hooks/useExamData";
 import { signOut, auth } from "@/lib/firebase";
-import { LogOut, Activity, Target, ShieldAlert, Award, FileText, Clock, PlayCircle, Shield, History, AlertTriangle } from "lucide-react";
+import { LogOut, Activity, Target, ShieldAlert, Award, FileText, Clock, PlayCircle, Shield, History, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +15,20 @@ import { format } from "date-fns";
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const [startingExam, setStartingExam] = useState<string | null>(null);
 
   const { data: profile } = useProfile(user?.uid);
   const { data: exams } = useAvailableExams();
   const { data: submissions } = useMySubmissions(user?.uid);
   const { data: stats } = useMyStats(user?.uid);
+
+  // Build a map: examId → submissionId for quick lookup
+  const submittedExamMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of submissions ?? []) {
+      map[s.exam_id] = s.id;
+    }
+    return map;
+  }, [submissions]);
 
   useEffect(() => {
     if (!authLoading && !user) setLocation("/");
@@ -29,11 +37,6 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     setLocation("/");
-  };
-
-  const handleStartExam = (examId: string) => {
-    setStartingExam(examId);
-    setLocation(`/exam/${examId}`);
   };
 
   const container = {
@@ -71,9 +74,19 @@ export default function Dashboard() {
       <main className="container max-w-6xl mx-auto px-4 mt-6 sm:mt-8">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 sm:space-y-10">
 
+          {/* Welcome */}
+          <motion.div variants={item}>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              Welcome back{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {profile ? `${profile.college} · ${profile.department} · ${profile.roll_number}` : user.email}
+            </p>
+          </motion.div>
+
           {/* Stats */}
           <motion.div variants={item}>
-            <h2 className="text-base sm:text-xl font-medium tracking-tight mb-3 sm:mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-medium tracking-tight mb-3 sm:mb-4 flex items-center gap-2">
               <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Overview
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -103,45 +116,63 @@ export default function Dashboard() {
 
             {/* Available Exams */}
             <motion.div variants={item} className="lg:col-span-2 space-y-3 sm:space-y-4">
-              <h2 className="text-base sm:text-xl font-medium tracking-tight flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-medium tracking-tight flex items-center gap-2">
                 <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Available Exams
               </h2>
               {exams && exams.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {exams.map((exam) => (
-                    <Card key={exam.id} className="bg-card hover:bg-card/80 transition-colors border-border flex flex-col group relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover:bg-primary transition-colors" />
-                      <CardHeader className="pb-3 pl-5">
-                        <div className="flex justify-between items-start mb-2">
-                          <Badge variant="outline" className="text-xs font-mono bg-background">EXAM</Badge>
-                          <div className="flex items-center text-xs text-muted-foreground font-mono">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {exam.duration_minutes}m
+                  {exams.map((exam) => {
+                    const existingSubmissionId = submittedExamMap[exam.id];
+                    const alreadyTaken = !!existingSubmissionId;
+                    return (
+                      <Card key={exam.id} className={`bg-card border-border flex flex-col group relative overflow-hidden transition-colors ${alreadyTaken ? "opacity-80" : "hover:bg-card/80"}`}>
+                        <div className={`absolute top-0 left-0 w-1 h-full transition-colors ${alreadyTaken ? "bg-green-500/50" : "bg-primary/40 group-hover:bg-primary"}`} />
+                        <CardHeader className="pb-3 pl-5">
+                          <div className="flex justify-between items-start mb-2">
+                            {alreadyTaken
+                              ? <Badge variant="secondary" className="text-xs font-mono text-green-600 bg-green-500/10 border-green-500/20 border">COMPLETED</Badge>
+                              : <Badge variant="outline" className="text-xs font-mono bg-background">EXAM</Badge>
+                            }
+                            <div className="flex items-center text-xs text-muted-foreground font-mono">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {exam.duration_minutes}m
+                            </div>
                           </div>
-                        </div>
-                        <CardTitle className="text-base sm:text-lg leading-tight">{exam.title}</CardTitle>
-                        <CardDescription className="text-xs sm:text-sm line-clamp-2">
-                          {exam.description || "No description provided."}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-3 mt-auto pl-5">
-                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                          <AlertTriangle className="w-3 h-3 mr-1 text-destructive/70" />
-                          Max violations: <span className="text-foreground font-medium ml-1">{exam.max_violations}</span>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="pl-5">
-                        <Button
-                          className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 text-sm"
-                          onClick={() => handleStartExam(exam.id)}
-                          disabled={startingExam === exam.id}
-                        >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          {startingExam === exam.id ? "Starting..." : "Start Exam"}
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
+                          <CardTitle className="text-base sm:text-lg leading-tight">{exam.title}</CardTitle>
+                          <CardDescription className="text-xs sm:text-sm line-clamp-2">
+                            {exam.description || "No description provided."}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-3 mt-auto pl-5">
+                          {!alreadyTaken && (
+                            <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                              <AlertTriangle className="w-3 h-3 mr-1 text-destructive/70" />
+                              Max violations: <span className="text-foreground font-medium ml-1">{exam.max_violations}</span>
+                            </div>
+                          )}
+                        </CardContent>
+                        <CardFooter className="pl-5">
+                          {alreadyTaken ? (
+                            <Button
+                              className="w-full bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-500/20 text-sm"
+                              onClick={() => setLocation(`/result/${existingSubmissionId}`)}
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              View Result
+                            </Button>
+                          ) : (
+                            <Button
+                              className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20 text-sm"
+                              onClick={() => setLocation(`/exam/${exam.id}`)}
+                            >
+                              <PlayCircle className="w-4 h-4 mr-2" />
+                              Start Exam
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <Card className="bg-background border-dashed border-border/50">
@@ -155,7 +186,7 @@ export default function Dashboard() {
 
             {/* Submission History */}
             <motion.div variants={item} className="space-y-3 sm:space-y-4">
-              <h2 className="text-base sm:text-xl font-medium tracking-tight flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-medium tracking-tight flex items-center gap-2">
                 <History className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> History
               </h2>
               <Card className="bg-card/50 border-border">
