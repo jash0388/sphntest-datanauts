@@ -49,9 +49,10 @@ export default function ExamTaking() {
   // Pre-fill from profile
   useEffect(() => {
     if (profile) {
-      if (profile.display_name) setStudentName(profile.display_name);
+      if (profile.full_name) setStudentName(profile.full_name);
       else if (user?.displayName) setStudentName(user.displayName);
-      if (profile.roll_number) setRollNumber(profile.roll_number);
+      else if (user?.email) setStudentName(user.email.split("@")[0]);
+      if (profile.name) setRollNumber(profile.name);
     }
   }, [profile, user]);
 
@@ -93,6 +94,7 @@ export default function ExamTaking() {
         status: forced ? "terminated" : "completed",
         student_name: studentName || user.email || "Unknown",
         roll_number: rollNumber,
+        student_answers: answers,
       }, {
         onSuccess: (sub) => {
           if (document.fullscreenElement) document.exitFullscreen().catch(console.error);

@@ -110,6 +110,7 @@ export function useSubmitExam() {
       status: "completed" | "terminated";
       student_name: string;
       roll_number: string;
+      student_answers?: Record<string, any>;
     }) => {
       const { data, error } = await supabase
         .from("exam_submissions")

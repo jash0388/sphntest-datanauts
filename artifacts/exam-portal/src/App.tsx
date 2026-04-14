@@ -9,6 +9,8 @@ import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import Exam from "@/pages/exam";
 import Result from "@/pages/result";
+import Metrics from "@/pages/metrics";
+import Profile from "@/pages/profile";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +22,8 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/exam/:examId" component={Exam} />
       <Route path="/result/:attemptId" component={Result} />
+      <Route path="/metrics" component={Metrics} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );

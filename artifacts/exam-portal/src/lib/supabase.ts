@@ -44,14 +44,18 @@ export interface SupabaseSubmission {
   student_name: string;
   roll_number: string;
   submitted_at: string;
+  student_answers?: Record<string, any>;
 }
 
 export interface StudentProfile {
   id: string;
   email: string;
-  display_name: string | null;
-  college: string;
-  department: string;
-  roll_number: string;
+  full_name: string | null;
+  name: string | null; // Used for Roll Number
+  college: string | null;
+  year: string | null;
+  role: string | null; // Used for Department
+  firebase_uid: string | null;
+  is_firebase_user: boolean;
   created_at: string;
 }
