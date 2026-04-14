@@ -1,6 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/exam-portal build",
-  "outputDirectory": "artifacts/exam-portal/dist",
-  "installCommand": "pnpm install",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
   "framework": "vite"
 }
