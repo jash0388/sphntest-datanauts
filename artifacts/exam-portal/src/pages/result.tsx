@@ -14,9 +14,18 @@ export default function Result() {
   const [, setLocation] = useLocation();
 
   const { data: submission, isLoading: subLoading, error } = useSubmission(submissionId);
-  const { data: questions, isLoading: qLoading } = useExamQuestions(submission?.exam_id);
+  // Only fetch live questions if the submission has no snapshot (backwards compatibility for old results)
+  const needsLiveQuestions = !!submission && !submission.question_snapshots?.length;
+  const { data: liveQuestions, isLoading: qLoading } = useExamQuestions(
+    needsLiveQuestions ? submission?.exam_id : undefined
+  );
 
-  if (subLoading || qLoading) {
+  // Use snapshots if available; otherwise fall back to live questions
+  const questions = submission?.question_snapshots?.length
+    ? submission.question_snapshots
+    : liveQuestions;
+
+  if (subLoading || (needsLiveQuestions && qLoading)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

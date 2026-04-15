@@ -94,6 +94,18 @@ export default function ExamTaking() {
         }
       }
 
+      // Snapshot all question data so results survive future question deletions
+      const questionSnapshots = questions.map((q) => ({
+        id: q.id,
+        question: q.question,
+        question_type: q.question_type,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        marks: q.marks,
+        sort_order: q.sort_order,
+        explanation: q.explanation ?? null,
+      }));
+
       submitExam.mutate({
         user_id: user.uid,
         exam_id: exam.id,
@@ -105,6 +117,7 @@ export default function ExamTaking() {
         student_name: studentName || user.email || "Unknown",
         roll_number: rollNumber,
         student_answers: currentAnswers,
+        question_snapshots: questionSnapshots,
       }, {
         onSuccess: (sub) => {
           if (document.fullscreenElement) document.exitFullscreen().catch(console.error);

@@ -111,6 +111,7 @@ export function useSubmitExam() {
       student_name: string;
       roll_number: string;
       student_answers?: Record<string, any>;
+      question_snapshots?: any[];
     }) => {
       const { data, error } = await supabase
         .from("exam_submissions")

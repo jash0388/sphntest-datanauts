@@ -46,6 +46,7 @@ export interface SupabaseSubmission {
   roll_number: string;
   submitted_at: string;
   student_answers?: Record<string, any>;
+  question_snapshots?: SupabaseQuestion[];
 }
 
 export interface StudentProfile {
