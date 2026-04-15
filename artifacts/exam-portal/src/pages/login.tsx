@@ -56,8 +56,9 @@ function DesktopLogin({ props }: any) {
                   <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl font-bold tracking-tight">SPHN Web Test</CardTitle>
-                  <CardDescription className="mt-1 text-sm">Secure Academic Assessment</CardDescription>
+                  <h1 className="text-2xl font-bold tracking-tight">SPHN Online | Student Exam Portal</h1>
+                  <CardDescription className="mt-1 text-sm">Secure Academic Assessment Platform</CardDescription>
+                  <p className="mt-2 text-sm text-muted-foreground">Welcome to SPHN Online, your trusted platform for SPHN tests and exams. Access secure student assessments, track your progress, and achieve academic excellence with our comprehensive exam portal. Whether you're taking SPHN exams or preparing for tests, our platform ensures a smooth and reliable experience.</p>
                 </div>
                 <div className="flex rounded-lg border border-border bg-muted/30 p-1 gap-1">
                   {["signin", "signup"].map((m) => (
