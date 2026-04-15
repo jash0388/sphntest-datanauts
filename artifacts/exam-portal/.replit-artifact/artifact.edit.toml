@@ -1,0 +1,13 @@
+schemaVersion = 2
+id = "19f1a339-4ac6-465b-aa2c-b57c10a42ed4"
+kind = "web"
+title = "ExamPortal"
+previewPath = "/"
+
+[[services]]
+name = "web"
+devCommand = "pnpm --filter @workspace/exam-portal run dev"
+waitForPort = 3000
+productionServe = "static"
+productionBuild = "pnpm --filter @workspace/exam-portal run build"
+path = "/"

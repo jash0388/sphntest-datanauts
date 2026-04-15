@@ -190,11 +190,13 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const verifyingRef = useRef(false);
   const { data: profile, isLoading: profileLoading } = useProfile(user?.uid);
 
   useEffect(() => {
-    if (user && !profileLoading) { setLocation(profile ? "/dashboard" : "/register"); }
-  }, [user, profile, profileLoading, setLocation]);
+    // Don't redirect if user is in the middle of OTP verification
+    if (user && !profileLoading && step !== "otp") { setLocation(profile ? "/dashboard" : "/register"); }
+  }, [user, profile, profileLoading, setLocation, step]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -222,21 +224,26 @@ export default function Login() {
     finally { setIsLoading(false); }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = async (otpValue?: string) => {
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/auth/verify-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, otp: otp.join("") }) });
-      if (!res.ok) throw new Error("Invalid code");
-      toast({ title: "Verified" });
+      const code = otpValue ?? otp.join("");
+      const res = await fetch(`/api/auth/verify-otp`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, otp: code }) });
+      if (!res.ok) throw new Error("Invalid or expired code. Please try again.");
+      toast({ title: "Verified!", description: "Email verified successfully." });
+      // Allow redirect now that OTP is confirmed
+      setStep("credentials");
     } catch (err: any) { toast({ variant: "destructive", description: err.message }); }
-    finally { setIsLoading(false); }
+    finally { setIsLoading(false); verifyingRef.current = false; }
   };
 
   const handleOtpChange = (index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
     const next = [...otp]; next[index] = digit; setOtp(next);
     if (digit && index < 5) otpRefs.current[index + 1]?.focus();
-    if (next.every((d) => d !== "")) handleVerifyOtp();
+    if (next.every((d) => d !== "")) handleVerifyOtp(next.join(""));
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
@@ -245,7 +252,7 @@ export default function Login() {
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 6) { setOtp(pasted.split("")); handleVerifyOtp(); }
+    if (pasted.length === 6) { setOtp(pasted.split("")); handleVerifyOtp(pasted); }
   };
 
   const handleResend = async () => {

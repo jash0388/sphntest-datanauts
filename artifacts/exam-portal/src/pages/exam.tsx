@@ -35,6 +35,10 @@ export default function ExamTaking() {
   const [startTime] = useState(() => Date.now());
   const submitExam = useSubmitExam();
 
+  const violationRef = useRef(0);
+  const breachOverlayRef = useRef(false);
+  const submittedRef = useRef(false);
+
   const { data: exam, isLoading: examLoading } = useExam(examId);
   const { data: questions, isLoading: questionsLoading } = useExamQuestions(examId);
   const { data: mySubmissions, isLoading: submissionsLoading } = useMySubmissions(user?.uid);
@@ -67,17 +71,23 @@ export default function ExamTaking() {
     }
   }, [exam, phase, timeLeft]);
 
+  const answersRef = useRef<Record<string, string>>({});
+  answersRef.current = answers;
+
   const handleSubmitExam = useCallback(
     (forced = false) => {
       if (!user || !exam || !questions) return;
+      if (submittedRef.current) return;
+      submittedRef.current = true;
 
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
       let score = 0;
       const totalMarks = questions.reduce((s, q) => s + q.marks, 0);
+      const currentAnswers = answersRef.current;
 
       for (const q of questions) {
         if (q.question_type === "mcq" && q.correct_answer) {
-          const given = answers[q.id];
+          const given = currentAnswers[q.id];
           if (given && given.trim() === q.correct_answer.trim()) {
             score += q.marks;
           }
@@ -89,12 +99,12 @@ export default function ExamTaking() {
         exam_id: exam.id,
         score,
         total_marks: totalMarks,
-        violations: violationCount,
+        violations: violationRef.current,
         time_used_seconds: timeTaken,
         status: forced ? "terminated" : "completed",
         student_name: studentName || user.email || "Unknown",
         roll_number: rollNumber,
-        student_answers: answers,
+        student_answers: currentAnswers,
       }, {
         onSuccess: (sub) => {
           if (document.fullscreenElement) document.exitFullscreen().catch(console.error);
@@ -102,37 +112,51 @@ export default function ExamTaking() {
         },
         onError: (err) => {
           console.error("Submit error:", err);
+          submittedRef.current = false;
           toast({ variant: "destructive", title: "Submit Failed", description: "Could not submit. Please try again." });
         },
       });
     },
-    [user, exam, questions, answers, violationCount, startTime, submitExam, setLocation, toast, studentName, rollNumber]
+    [user, exam, questions, startTime, submitExam, setLocation, toast, studentName, rollNumber]
   );
 
   // Timer countdown
   useEffect(() => {
-    if (phase !== "in-progress" || timeLeft === null || timeLeft <= 0) return;
-    if (timeLeft === 0) { handleSubmitExam(false); return; }
+    if (phase !== "in-progress" || timeLeft === null) return;
+    if (timeLeft <= 0) { handleSubmitExam(false); return; }
     const t = setTimeout(() => setTimeLeft((p) => (p !== null ? p - 1 : null)), 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, phase]);
+  }, [timeLeft, phase, handleSubmitExam]);
 
-  // Security monitoring (only during in-progress)
+  // Keep refs in sync with state
+  useEffect(() => { violationRef.current = violationCount; }, [violationCount]);
+  useEffect(() => { breachOverlayRef.current = breachOverlay; }, [breachOverlay]);
+
+  const handleSubmitExamRef = useRef(handleSubmitExam);
+  useEffect(() => { handleSubmitExamRef.current = handleSubmitExam; }, [handleSubmitExam]);
+
+  const examMaxViolationsRef = useRef(exam?.max_violations ?? 3);
+  useEffect(() => { if (exam) examMaxViolationsRef.current = exam.max_violations; }, [exam]);
+
+  // Security monitoring (only during in-progress) — uses refs to avoid stale closures
   useEffect(() => {
     if (phase !== "in-progress" || !exam) return;
 
     const handleBreach = () => {
-      if (breachOverlay) return;
-      const newCount = violationCount + 1;
+      if (breachOverlayRef.current) return;
+      const newCount = violationRef.current + 1;
+      violationRef.current = newCount;
       setViolationCount(newCount);
+      breachOverlayRef.current = true;
       setBreachOverlay(true);
 
-      if (newCount >= exam.max_violations) {
-        handleSubmitExam(true);
+      if (newCount >= examMaxViolationsRef.current) {
+        handleSubmitExamRef.current(true);
         return;
       }
 
       setTimeout(() => {
+        breachOverlayRef.current = false;
         setBreachOverlay(false);
         if (!document.fullscreenElement) {
           document.documentElement.requestFullscreen().catch(console.error);
@@ -155,7 +179,7 @@ export default function ExamTaking() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
     };
-  }, [phase, exam, breachOverlay, violationCount, handleSubmitExam]);
+  }, [phase, exam]);
 
   const handleEnterFullscreen = async () => {
     try {

@@ -4,5 +4,8 @@
   "private": true,
   "scripts": {
     "build": "pnpm -r build"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "protobufjs"]
   }
 }

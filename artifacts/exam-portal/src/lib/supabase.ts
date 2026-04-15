@@ -29,6 +29,7 @@ export interface SupabaseQuestion {
   correct_answer: string | null;
   marks: number;
   sort_order: number;
+  explanation?: string | null;
   created_at: string;
 }
 
