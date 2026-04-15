@@ -72,57 +72,90 @@ function DesktopRegister({ form, onSubmit, user, createProfile }: any) {
 
 // --- Mobile Register (Academic Atelier Style) ---
 function MobileRegister({ form, onSubmit, user, createProfile }: any) {
+  const inputStyle = {
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "inherit",
+    width: "100%",
+    borderRadius: "0.875rem",
+    padding: "1rem 1.25rem",
+    fontSize: "0.875rem",
+    outline: "none",
+    transition: "all 0.2s",
+  };
+  const focusInput = (e: any) => {
+    e.target.style.borderColor = "rgba(79,126,245,0.6)";
+    e.target.style.boxShadow = "0 0 0 3px rgba(79,126,245,0.1)";
+  };
+  const blurInput = (e: any) => {
+    e.target.style.borderColor = "rgba(255,255,255,0.08)";
+    e.target.style.boxShadow = "none";
+  };
+
   return (
-    <div className="min-h-screen bg-background text-on-background flex flex-col relative overflow-hidden font-body">
-      <div className="fixed top-0 right-0 -z-10 w-[400px] h-[400px] bg-sky-100/30 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
-      
-      <header className="w-full px-6 py-8 flex items-center gap-3 bg-white/50 backdrop-blur-xl">
-         <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain rounded-lg" />
-         <span className="text-2xl font-bold text-primary font-headline tracking-tighter">SPHN Web Test</span>
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden font-body">
+      {/* Glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 -z-10 w-[320px] h-[320px] rounded-full" style={{ background: "radial-gradient(circle, rgba(79,126,245,0.13) 0%, transparent 70%)" }} />
+
+      <header className="w-full px-6 pt-14 pb-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+        </div>
+        <span className="text-xl font-bold text-foreground font-headline tracking-tight">SPHN Web Test</span>
       </header>
 
-      <main className="flex-grow flex items-center justify-center px-4 py-8">
+      <main className="flex-grow flex items-end justify-center px-4 pb-0">
         <div className="w-full max-w-sm">
-          <div className="bg-surface-container-lowest rounded-2xl premium-shadow p-8 border border-outline-variant/10">
-            <div className="text-center mb-10">
-              <h1 className="text-3xl font-extrabold text-on-surface font-headline tracking-tighter mb-2">Stage 02</h1>
-              <p className="text-on-surface-variant text-sm font-medium">Identity Enrollment</p>
-            </div>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="flex flex-col gap-1 px-1">
-                  <label className="text-[10px] font-black text-outline uppercase tracking-[0.2em] ml-1">Current User</label>
-                  <div className="bg-surface-container-high/50 p-4 rounded-xl text-center border border-outline-variant/10">
-                    <p className="text-xs font-bold text-on-surface truncate">{user.email}</p>
-                  </div>
-                </div>
+          <div className="mb-8 px-1">
+            <h1 className="text-4xl font-extrabold text-foreground font-headline tracking-tighter mb-2">Stage 02</h1>
+            <p className="text-muted-foreground text-sm">Identity Enrollment</p>
+          </div>
 
+          <div className="rounded-3xl p-6 pb-10 space-y-5" style={{ background: "linear-gradient(180deg, rgba(19,19,31,0.95) 0%, rgba(9,9,15,0.98) 100%)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 -8px 40px rgba(0,0,0,0.5)" }}>
+            {/* Current user chip */}
+            <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current User</span>
+              <span className="text-xs font-bold text-foreground truncate flex-1 text-right">{user.email}</span>
+            </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                 <FormField control={form.control} name="college" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-outline uppercase tracking-[0.2em] ml-2">Institution</FormLabel>
-                    <FormControl><input className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 text-on-surface outline-none focus:ring-2 focus:ring-primary/20" placeholder="e.g. SPHN" {...field} /></FormControl>
-                    <FormMessage className="text-[10px] ml-2" />
+                    <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Institution</FormLabel>
+                    <FormControl>
+                      <input style={inputStyle} placeholder="e.g. SPHN" onFocus={focusInput} onBlur={blurInput} {...field} />
+                    </FormControl>
+                    <FormMessage className="text-[10px] ml-1" />
                   </FormItem>
                 )} />
 
                 <FormField control={form.control} name="department" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-outline uppercase tracking-[0.2em] ml-2">Major</FormLabel>
-                    <FormControl><input className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 text-on-surface outline-none focus:ring-2 focus:ring-primary/20" placeholder="e.g. DS" {...field} /></FormControl>
-                    <FormMessage className="text-[10px] ml-2" />
+                    <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Major</FormLabel>
+                    <FormControl>
+                      <input style={inputStyle} placeholder="e.g. DS" onFocus={focusInput} onBlur={blurInput} {...field} />
+                    </FormControl>
+                    <FormMessage className="text-[10px] ml-1" />
                   </FormItem>
                 )} />
 
                 <FormField control={form.control} name="rollNumber" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black text-outline uppercase tracking-[0.2em] ml-2">Roll ID</FormLabel>
-                    <FormControl><input className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 text-on-surface outline-none focus:ring-2 focus:ring-primary/20 font-mono" placeholder="24N81A6..." {...field} /></FormControl>
-                    <FormMessage className="text-[10px] ml-2" />
+                    <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Roll ID</FormLabel>
+                    <FormControl>
+                      <input style={{ ...inputStyle, fontFamily: "monospace" }} placeholder="24N81A6..." onFocus={focusInput} onBlur={blurInput} {...field} />
+                    </FormControl>
+                    <FormMessage className="text-[10px] ml-1" />
                   </FormItem>
                 )} />
 
-                <button type="submit" className="w-full bg-primary text-white font-black py-5 rounded-xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2" disabled={createProfile.isPending}>
+                <button
+                  type="submit"
+                  className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] mt-2"
+                  style={{ background: "linear-gradient(135deg, #4f7ef5 0%, #3d6bd4 100%)", boxShadow: "0 4px 20px rgba(79,126,245,0.4), 0 1px 0 rgba(255,255,255,0.1) inset" }}
+                  disabled={createProfile.isPending}
+                >
                   {createProfile.isPending ? <RefreshCw className="animate-spin w-5 h-5" /> : "Secure Profile"}
                 </button>
               </form>
@@ -130,7 +163,6 @@ function MobileRegister({ form, onSubmit, user, createProfile }: any) {
           </div>
         </div>
       </main>
-      <style>{`.font-variation-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
     </div>
   );
 }

@@ -33,9 +33,9 @@ export default function Metrics() {
   if (!user) return null;
 
   return (
-    <div className={`min-h-screen ${isMobile ? "bg-surface font-body text-on-surface" : "bg-background text-foreground"} pb-24`}>
+    <div className={`min-h-screen ${isMobile ? "bg-background font-body text-foreground" : "bg-background text-foreground"} pb-24`}>
       {/* Header */}
-      <header className={`sticky top-0 z-50 ${isMobile ? "bg-white/70 backdrop-blur-xl border-b border-primary/5 shadow-sm" : "bg-background/80 backdrop-blur-md border-b border-border"}`}>
+      <header className={`sticky top-0 z-50 ${isMobile ? "backdrop-blur-xl border-b" : "bg-background/80 backdrop-blur-md border-b border-border"}`} style={isMobile ? { background: "rgba(8,8,15,0.9)", borderColor: "rgba(255,255,255,0.06)" } : {}}>
         <div className="container max-w-2xl mx-auto px-6 h-16 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="text-muted-foreground hover:text-foreground -ml-2">
             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -70,7 +70,7 @@ export default function Metrics() {
                   <motion.div key={sub.id} variants={item} onClick={() => setLocation(`/result/${sub.id}`)}>
                     <Card className={`${isMobile ? "bg-surface-container-low border-transparent hover:bg-surface-container-lowest hover:premium-shadow-sm" : "bg-card hover:bg-muted/50"} transition-all cursor-pointer overflow-hidden border border-border group`}>
                       <CardContent className="p-5 flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isTerminated ? "bg-red-50 text-red-600" : pct >= 50 ? "bg-primary/5 text-primary" : "bg-orange-50 text-orange-600"}`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0`} style={isTerminated ? { background: "rgba(239,68,68,0.1)", color: "#f87171" } : pct >= 50 ? { background: "rgba(79,126,245,0.12)", color: "#4f7ef5" } : { background: "rgba(251,146,60,0.1)", color: "#fb923c" }}>
                            {isTerminated ? <ShieldAlert className="w-6 h-6" /> : <Award className="w-6 h-6" />}
                         </div>
                         
@@ -106,16 +106,19 @@ export default function Metrics() {
       </main>
 
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 bg-white/80 backdrop-blur-2xl rounded-t-[2rem] shadow-[0px_-8px_32px_rgba(0,101,145,0.08)] z-50 border-t border-primary/5">
-          <button onClick={() => setLocation("/dashboard")} className="flex flex-col items-center justify-center text-on-surface-variant/40 px-8 py-2.5 hover:text-primary transition-all active:scale-95">
-            <Layout className="w-6 h-6" /><span className="font-label text-[10px] font-black uppercase tracking-widest mt-1">Home</span>
-          </button>
-          <button className="flex flex-col items-center justify-center bg-primary/5 text-primary rounded-2xl px-8 py-2.5 transition-transform active:scale-95 border border-primary/10">
-            <Activity className="w-6 h-6" /><span className="font-label text-[10px] font-black uppercase tracking-widest mt-1">Results</span>
-          </button>
-          <button onClick={() => setLocation("/profile")} className="flex flex-col items-center justify-center text-on-surface-variant/40 px-8 py-2.5 hover:text-primary transition-all active:scale-95">
-            <User className="w-6 h-6" /><span className="font-label text-[10px] font-black uppercase tracking-widest mt-1">Profile</span>
-          </button>
+        <nav className="fixed bottom-0 left-0 w-full z-50 px-5 pb-6 pt-3" style={{ background: "linear-gradient(to top, rgba(8,8,15,0.98) 60%, rgba(8,8,15,0) 100%)" }}>
+          <div className="flex justify-around items-center rounded-2xl px-2 py-3 max-w-xl mx-auto" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(20px)" }}>
+            {[
+              { icon: <Layout className="w-5 h-5" />, label: "Home", onClick: () => setLocation("/dashboard") },
+              { icon: <Activity className="w-5 h-5" />, label: "Results", active: true, onClick: () => {} },
+              { icon: <User className="w-5 h-5" />, label: "Profile", onClick: () => setLocation("/profile") },
+            ].map((nav) => (
+              <button key={nav.label} onClick={nav.onClick} className="flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all active:scale-95" style={nav.active ? { background: "rgba(79,126,245,0.15)", color: "#4f7ef5" } : { color: "rgba(255,255,255,0.3)" }}>
+                {nav.icon}
+                <span className="text-[9px] font-bold uppercase tracking-widest">{nav.label}</span>
+              </button>
+            ))}
+          </div>
         </nav>
       )}
     </div>

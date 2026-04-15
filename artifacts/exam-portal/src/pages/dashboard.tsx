@@ -197,76 +197,140 @@ function DesktopDashboard({ user, profile, exams, submissions, stats, submittedE
   );
 }
 
-// --- Mobile UI Components (Academic Atelier Style) ---
+// --- Mobile UI Components (Premium Dark) ---
 function MobileDashboard({ user, profile, exams, submissions, stats, submittedExamMap, handleLogout, setLocation }: any) {
+  const availableExams = exams?.filter((e: any) => !submittedExamMap[e.id]) ?? [];
+  const completedExams = exams?.filter((e: any) => !!submittedExamMap[e.id]) ?? [];
+
   return (
-    <div className="min-h-screen bg-surface font-body text-on-surface pb-28">
-      <div className="fixed top-0 right-0 -z-10 w-[500px] h-[500px] bg-sky-100/20 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
-      
-      <header className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl shadow-[0px_12px_32px_rgba(0,101,145,0.05)]">
-        <div className="flex items-center justify-between px-6 h-16 w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain rounded-full border border-primary/20" />
-            <span className="text-xl font-bold text-primary font-headline tracking-tight">SPHN Web Test</span>
+    <div className="min-h-screen bg-background font-body text-foreground pb-28 relative overflow-x-hidden">
+      {/* Ambient glows */}
+      <div className="fixed top-0 left-0 -z-10 w-[300px] h-[300px]" style={{ background: "radial-gradient(circle at 20% 20%, rgba(79,126,245,0.12) 0%, transparent 60%)" }} />
+      <div className="fixed bottom-24 right-0 -z-10 w-[200px] h-[200px]" style={{ background: "radial-gradient(circle at 80% 80%, rgba(79,126,245,0.08) 0%, transparent 60%)" }} />
+
+      {/* Fixed Header */}
+      <header className="fixed top-0 w-full z-50 backdrop-blur-xl" style={{ background: "rgba(8,8,15,0.85)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center justify-between px-5 h-16 max-w-xl mx-auto">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <span className="text-base font-bold text-foreground font-headline tracking-tight">SPHN Web Test</span>
           </div>
+          <button onClick={handleLogout} className="p-2 rounded-xl transition-colors" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <LogOut className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
       </header>
 
-      <main className="pt-24 px-6 max-w-7xl mx-auto space-y-10">
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
-          <div>
-            <span className="font-label text-[11px] font-bold uppercase tracking-[0.2em] text-secondary mb-2 block">Student Dashboard</span>
-            <h1 className="font-headline text-4xl font-extrabold text-on-surface tracking-tight">
-              Welcome, {user.email?.split("@")[0]}
-            </h1>
-          </div>
+      <main className="pt-20 px-5 max-w-xl mx-auto space-y-8">
+        {/* Welcome */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: "easeOut" }} className="pt-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Student Dashboard</p>
+          <h1 className="font-headline text-3xl font-extrabold text-foreground tracking-tight">
+            Welcome, {user.email?.split("@")[0]}
+          </h1>
+          {profile && <p className="text-muted-foreground text-sm mt-1">Roll No: {profile.name}</p>}
+        </motion.div>
+
+        {/* Stats Row */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }} className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Taken", value: stats?.totalAttempts ?? 0 },
+            { label: "Avg", value: stats?.averageScore != null ? `${Math.round(stats.averageScore)}%` : "--" },
+            { label: "Best", value: stats?.highestScore != null ? `${Math.round(stats.highestScore)}%` : "--", accent: true },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl p-4 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <p className={`text-xl font-bold ${s.accent ? "text-primary" : "text-foreground"}`}>{s.value}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">{s.label}</p>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* Available Exams */}
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }} className="space-y-4">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" /> Available Assessments
+          </h3>
+          {availableExams.length > 0 ? (
+            <div className="space-y-3">
+              {availableExams.map((exam: any, i: number) => (
+                <motion.div
+                  key={exam.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.15 + i * 0.05 }}
+                  className="rounded-2xl p-5 group transition-all duration-200 active:scale-[0.99]"
+                  style={{ background: "linear-gradient(145deg, rgba(19,19,31,0.9) 0%, rgba(13,13,22,0.95) 100%)", border: "1px solid rgba(79,126,245,0.15)", boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg text-primary" style={{ background: "rgba(79,126,245,0.12)", border: "1px solid rgba(79,126,245,0.2)" }}>CORE PAPER</span>
+                    <div className="flex items-center gap-1 text-muted-foreground text-xs font-mono">
+                      <Clock className="w-3 h-3" />{exam.duration_minutes}m
+                    </div>
+                  </div>
+                  <h4 className="font-headline text-lg font-bold text-foreground mb-1">{exam.title}</h4>
+                  <p className="text-muted-foreground text-sm mb-5 line-clamp-2">{exam.description || "Comprehensive technical assessment."}</p>
+                  <button
+                    onClick={() => setLocation(`/exam/${exam.id}`)}
+                    className="w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98]"
+                    style={{ background: "linear-gradient(135deg, #4f7ef5 0%, #3d6bd4 100%)", boxShadow: "0 4px 20px rgba(79,126,245,0.4), 0 1px 0 rgba(255,255,255,0.1) inset" }}
+                  >
+                    Secure Start <PlayCircle className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-14 text-center rounded-2xl space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+              <BookOpen className="w-8 h-8 text-muted-foreground mx-auto opacity-30" />
+              <p className="text-muted-foreground text-sm font-medium">No tests available for now.</p>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Stay tuned for updates!</p>
+            </div>
+          )}
         </motion.section>
 
-        <section className="space-y-6">
-          <h3 className="font-headline text-xl font-bold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary font-variation-fill">assignment</span>
-            Available Assessments
-          </h3>
-          <div className="grid grid-cols-1 gap-6">
-            {exams?.filter((exam: any) => !submittedExamMap[exam.id]).length > 0 ? (
-              exams?.filter((exam: any) => !submittedExamMap[exam.id]).map((exam: any) => (
-                <motion.div key={exam.id} layoutId={exam.id} className="bg-surface-container-low rounded-2xl p-6 tonal-transition group border border-transparent hover:bg-surface-container-lowest hover:premium-shadow hover:border-outline-variant/20">
-                  <div className="flex justify-between items-start mb-4">
-                     <span className="px-3 py-1 bg-white/50 text-primary text-[10px] font-bold rounded-lg border border-primary/10">CORE PAPER</span>
-                    <div className="flex items-center gap-1 text-on-surface-variant"><Clock className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-widest">{exam.duration_minutes}m</span></div>
-                  </div>
-                  <h4 className="font-headline text-xl font-bold text-on-surface group-hover:text-primary transition-colors">{exam.title}</h4>
-                  <p className="text-on-surface-variant text-sm mt-1 mb-8 line-clamp-2 min-h-10">{exam.description || "Comprehensive technical assessment."}</p>
-                  <button onClick={() => setLocation(`/exam/${exam.id}`)} className="w-full py-3.5 px-6 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-extrabold flex items-center justify-center gap-2 tonal-transition active:scale-[0.98] shadow-lg shadow-primary/10 hover:shadow-primary/20">Secure Start<PlayCircle className="w-5 h-5" /></button>
-                </motion.div>
-              ))
-            ) : (
-              <div className="py-20 text-center space-y-4">
-                <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mx-auto opacity-40">
-                  <BookOpen className="w-8 h-8 text-on-surface-variant" />
-                </div>
-                <div>
-                  <p className="text-on-surface-variant font-medium">No tests available for now.</p>
-                  <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-1">Stay tuned for updates!</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 bg-white/80 backdrop-blur-2xl rounded-t-[2rem] shadow-[0px_-8px_32px_rgba(0,101,145,0.08)] z-50 border-t border-primary/5">
-          <button className="flex flex-col items-center justify-center bg-primary/5 text-primary rounded-2xl px-8 py-2.5 transition-transform active:scale-95 border border-primary/10">
-            <Layout className="w-6 h-6" /><span className="font-label text-[10px] font-black uppercase tracking-widest mt-1">Home</span>
-          </button>
-          <button onClick={() => setLocation("/metrics")} className="flex flex-col items-center justify-center text-on-surface-variant/40 px-8 py-2.5 hover:text-primary transition-all active:scale-95">
-            <Activity className="w-6 h-6" /><span className="font-label text-[10px] font-black uppercase tracking-widest mt-1">Results</span>
-          </button>
-          <button onClick={() => setLocation("/profile")} className="flex flex-col items-center justify-center text-on-surface-variant/40 px-8 py-2.5 hover:text-primary transition-all active:scale-95">
-            <User className="w-6 h-6" /><span className="font-label text-[10px] font-black uppercase tracking-widest mt-1">Profile</span>
-          </button>
-        </nav>
+        {/* Completed Exams */}
+        {completedExams.length > 0 && (
+          <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }} className="space-y-4">
+            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" /> Completed
+            </h3>
+            <div className="space-y-2">
+              {completedExams.map((exam: any) => {
+                const subId = submittedExamMap[exam.id];
+                return (
+                  <button key={exam.id} onClick={() => setLocation(`/result/${subId}`)} className="w-full text-left rounded-2xl p-4 flex items-center justify-between transition-all active:scale-[0.99]" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(79,126,245,0.12)" }}>
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="font-medium text-sm text-foreground truncate max-w-[180px]">{exam.title}</span>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          </motion.section>
+        )}
       </main>
-      <style>{`.font-variation-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 w-full z-50 px-5 pb-6 pt-3" style={{ background: "linear-gradient(to top, rgba(8,8,15,0.98) 60%, rgba(8,8,15,0) 100%)" }}>
+        <div className="flex justify-around items-center rounded-2xl px-2 py-3 max-w-xl mx-auto" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(20px)" }}>
+          {[
+            { icon: <Layout className="w-5 h-5" />, label: "Home", active: true, onClick: () => {} },
+            { icon: <Activity className="w-5 h-5" />, label: "Results", onClick: () => setLocation("/metrics") },
+            { icon: <User className="w-5 h-5" />, label: "Profile", onClick: () => setLocation("/profile") },
+          ].map((nav) => (
+            <button key={nav.label} onClick={nav.onClick} className="flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all active:scale-95" style={nav.active ? { background: "rgba(79,126,245,0.15)", color: "#4f7ef5" } : { color: "rgba(255,255,255,0.3)" }}>
+              {nav.icon}
+              <span className="text-[9px] font-bold uppercase tracking-widest">{nav.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }

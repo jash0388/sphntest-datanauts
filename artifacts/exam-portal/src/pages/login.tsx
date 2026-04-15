@@ -116,61 +116,160 @@ function DesktopLogin({ props }: any) {
   );
 }
 
-// --- Mobile Login (Academic Atelier Style) ---
+// --- Mobile Login (Premium Dark) ---
 function MobileLogin({ props }: any) {
-  const { mode, setMode, step, setStep, email, setEmail, password, setPassword, showPassword, setShowPassword, otp, setOtp, isLoading, resendCooldown, handleSignUp, handleSignIn, handleGoogleSignIn, handleResend, handleOtpChange, handleOtpKeyDown, handleOtpPaste, otpRefs }: any = props;
+  const { mode, setMode, step, email, setEmail, password, setPassword, otp, isLoading, resendCooldown, handleSignUp, handleSignIn, handleGoogleSignIn, handleResend, handleOtpChange, handleOtpKeyDown, handleOtpPaste, otpRefs }: any = props;
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      <div className="fixed top-0 right-0 -z-10 w-[400px] h-[400px] bg-sky-100/30 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
-      
-      <header className="w-full px-6 py-8 flex items-center gap-3">
-         <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain rounded-lg" />
-         <span className="text-2xl font-bold text-primary font-headline tracking-tight">SPHN Web Test</span>
+      {/* Ambient glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 -z-10 w-[360px] h-[360px] rounded-full" style={{ background: "radial-gradient(circle, rgba(79,126,245,0.15) 0%, transparent 70%)" }} />
+      <div className="fixed bottom-0 right-0 -z-10 w-[260px] h-[260px] rounded-full translate-x-1/2 translate-y-1/2" style={{ background: "radial-gradient(circle, rgba(79,126,245,0.08) 0%, transparent 70%)" }} />
+
+      <header className="w-full px-6 pt-14 pb-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10">
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+        </div>
+        <span className="text-xl font-bold text-foreground font-headline tracking-tight">SPHN Web Test</span>
       </header>
 
-      <main className="flex-grow flex items-center justify-center px-4 pb-12">
+      <main className="flex-grow flex items-end justify-center px-4 pb-0">
         <div className="w-full max-w-sm">
-          <div className="bg-surface-container-lowest rounded-2xl premium-shadow p-8 border border-outline-variant/10">
-            <AnimatePresence mode="wait">
-              {step === "credentials" ? (
-                <motion.div key="credentials" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div className="text-center mb-8">
-                    <h1 className="text-3xl font-extrabold text-on-surface font-headline tracking-tighter mb-2">{mode === "signin" ? "Login" : "Join"}</h1>
-                    <p className="text-on-surface-variant text-sm">Welcome back to DataNauts Hub.</p>
-                  </div>
-                  <form className="space-y-5" onSubmit={mode === "signup" ? handleSignUp : handleSignIn}>
-                    <input className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 text-on-surface outline-none focus:ring-2 focus:ring-primary/20" placeholder="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    <input className="w-full bg-surface-container-high border-none rounded-xl py-4 px-5 text-on-surface outline-none focus:ring-2 focus:ring-primary/20" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    <button className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20" type="submit" disabled={isLoading}>
+          <AnimatePresence mode="wait">
+            {step === "credentials" ? (
+              <motion.div
+                key="credentials"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <div className="mb-8 px-1">
+                  <h1 className="text-4xl font-extrabold text-foreground font-headline tracking-tighter mb-2">
+                    {mode === "signin" ? "Login" : "Join"}
+                  </h1>
+                  <p className="text-muted-foreground text-sm">Welcome back to DataNauts Hub.</p>
+                </div>
+
+                {/* Toggle */}
+                <div className="flex rounded-2xl p-1 mb-6" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  {["signin", "signup"].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMode(m as any)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+                      style={mode === m ? {
+                        background: "linear-gradient(135deg, #4f7ef5, #3d6bd4)",
+                        color: "#fff",
+                        boxShadow: "0 2px 12px rgba(79,126,245,0.4)"
+                      } : { color: "rgba(255,255,255,0.4)" }}
+                    >
+                      {m === "signin" ? "Sign In" : "Sign Up"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="rounded-3xl p-6 pb-10 space-y-4" style={{ background: "linear-gradient(180deg, rgba(19,19,31,0.95) 0%, rgba(9,9,15,0.98) 100%)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 -8px 40px rgba(0,0,0,0.5)" }}>
+                  <form className="space-y-3" onSubmit={mode === "signup" ? handleSignUp : handleSignIn}>
+                    <input
+                      className="w-full rounded-xl py-4 px-4 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-200"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      placeholder="Email Address"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onFocus={(e) => { e.target.style.borderColor = "rgba(79,126,245,0.6)"; e.target.style.boxShadow = "0 0 0 3px rgba(79,126,245,0.1)"; }}
+                      onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.08)"; e.target.style.boxShadow = "none"; }}
+                      required
+                    />
+                    <input
+                      className="w-full rounded-xl py-4 px-4 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-200"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      placeholder="Password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onFocus={(e) => { e.target.style.borderColor = "rgba(79,126,245,0.6)"; e.target.style.boxShadow = "0 0 0 3px rgba(79,126,245,0.1)"; }}
+                      onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.08)"; e.target.style.boxShadow = "none"; }}
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-4 rounded-xl font-bold text-white transition-all duration-200 active:scale-[0.98] mt-2"
+                      style={{ background: "linear-gradient(135deg, #4f7ef5 0%, #3d6bd4 100%)", boxShadow: "0 4px 20px rgba(79,126,245,0.4), 0 1px 0 rgba(255,255,255,0.1) inset" }}
+                    >
                       {isLoading ? <RefreshCw className="animate-spin mx-auto w-5 h-5" /> : (mode === "signin" ? "Sign In" : "Continue")}
                     </button>
-                    <div className="relative py-4"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-outline-variant/20"></div></div><div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest text-outline-variant bg-surface-container-lowest px-4">OR</div></div>
-                    <button onClick={handleGoogleSignIn} disabled={isLoading} className="w-full bg-white border border-outline-variant/30 py-4 rounded-xl font-bold flex items-center justify-center gap-2">Continue with Google</button>
                   </form>
-                  <div className="mt-8 text-center text-sm">
-                    <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-primary font-bold">
+
+                  <div className="flex items-center gap-3 py-1">
+                    <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">or</span>
+                    <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                  </div>
+
+                  <button
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 text-foreground"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Continue with Google
+                  </button>
+
+                  <div className="text-center pt-1">
+                    <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-primary font-semibold text-sm">
                       {mode === "signin" ? "Don't have an account? Sign Up" : "Already registered? Login"}
                     </button>
                   </div>
-                </motion.div>
-              ) : (
-                <motion.div key="otp" className="text-center space-y-6">
-                  <h2 className="text-2xl font-bold">Enter Code</h2>
-                  <p className="text-sm text-on-surface-variant">Check {email} for verification code.</p>
-                  <div className="flex justify-center gap-2">
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="otp"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="pb-0"
+              >
+                <div className="mb-8 px-1">
+                  <h1 className="text-4xl font-extrabold text-foreground font-headline tracking-tighter mb-2">Enter Code</h1>
+                  <p className="text-muted-foreground text-sm">Check {email} for verification code.</p>
+                </div>
+                <div className="rounded-3xl p-6 pb-10 space-y-6" style={{ background: "linear-gradient(180deg, rgba(19,19,31,0.95) 0%, rgba(9,9,15,0.98) 100%)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 -8px 40px rgba(0,0,0,0.5)" }}>
+                  <div className="flex justify-center gap-2.5">
                     {otp.map((digit: string, i: number) => (
-                      <input key={i} ref={(el) => { otpRefs.current[i] = el; }} type="text" maxLength={1} value={digit} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-14 text-center text-xl font-bold bg-surface-container-high rounded-xl outline-none focus:ring-2 focus:ring-primary/20" />
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        onPaste={i === 0 ? handleOtpPaste : undefined}
+                        className="w-12 h-14 text-center text-2xl font-bold rounded-xl transition-all duration-200 text-foreground"
+                        style={{ background: "rgba(255,255,255,0.05)", border: digit ? "1px solid rgba(79,126,245,0.6)" : "1px solid rgba(255,255,255,0.08)", boxShadow: digit ? "0 0 12px rgba(79,126,245,0.2)" : "none" }}
+                      />
                     ))}
                   </div>
-                  <button onClick={handleResend} disabled={resendCooldown > 0} className="text-primary font-bold">{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}</button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  <button
+                    onClick={handleResend}
+                    disabled={resendCooldown > 0}
+                    className="w-full text-center text-sm font-semibold text-primary py-2 disabled:opacity-40"
+                  >
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
-      <style>{`.font-variation-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
     </div>
   );
 }
