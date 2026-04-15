@@ -170,7 +170,7 @@ function MobileLogin({ props }: any) {
               >
                 <div className="mb-8 px-1">
                   <h1 className="text-4xl font-extrabold text-foreground font-headline tracking-tighter mb-2">
-                    {mode === "signin" ? "Login" : "Join"}
+                    {mode === "signin" ? "SPHN Online Login" : "Join SPHN Online"}
                   </h1>
                   <p className="text-muted-foreground text-sm">Welcome back to DataNauts Hub.</p>
                 </div>
@@ -294,6 +294,29 @@ function MobileLogin({ props }: any) {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* SEO Content Section */}
+      <div className="mt-16 max-w-4xl mx-auto px-4 text-center pb-8">
+        <h2 className="text-3xl font-bold mb-4 text-foreground">Welcome to SPHN Online</h2>
+        <p className="text-lg mb-6 text-muted-foreground">Your trusted platform for SPHN tests and SPHN exams. Access comprehensive student assessments with confidence.</p>
+        
+        <h3 className="text-2xl font-semibold mb-3 text-foreground">Why Choose SPHN Online?</h3>
+        <p className="mb-4 text-muted-foreground">SPHN Online provides a secure and reliable environment for taking SPHN exams. Our platform ensures that your SPHN test results are accurate and protected. Students can easily access their SPHN exam portal through sphn.online, making it convenient to manage academic assessments.</p>
+        
+        <h3 className="text-2xl font-semibold mb-3 text-foreground">Features of Our SPHN Exam Platform</h3>
+        <ul className="text-left max-w-2xl mx-auto mb-6 text-muted-foreground">
+          <li>• Secure SPHN test environment with advanced authentication</li>
+          <li>• Real-time monitoring for fair SPHN exams</li>
+          <li>• Comprehensive dashboard for SPHN test results</li>
+          <li>• Mobile-friendly access to sphn.online</li>
+          <li>• 24/7 support for SPHN exam queries</li>
+        </ul>
+        
+        <h3 className="text-2xl font-semibold mb-3 text-foreground">About SPHN Tests</h3>
+        <p className="mb-4 text-muted-foreground">SPHN tests are designed to evaluate student knowledge and skills in various academic subjects. Our SPHN exam portal at sphn.online offers a wide range of assessments to help students prepare and excel. Whether you're taking a SPHN test for certification or regular evaluation, our platform provides the tools you need for success.</p>
+        
+        <p className="text-sm text-muted-foreground">Visit sphn.online today to experience the best in student exam technology. Join thousands of students who trust SPHN Online for their academic assessments.</p>
+      </div>
     </div>
   );
 }
