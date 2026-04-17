@@ -14,16 +14,18 @@ export default function Result() {
   const [, setLocation] = useLocation();
 
   const { data: submission, isLoading: subLoading, error } = useSubmission(submissionId);
-  // Only fetch live questions if the submission has no snapshot (backwards compatibility for old results)
-  const needsLiveQuestions = !!submission && !submission.question_snapshots?.length;
+
+  // Snapshots are stored inside student_answers under a reserved key — no extra DB column needed
+  const snapshots: any[] | undefined = submission?.student_answers?.__question_snapshots__;
+
+  // Only fetch live questions when no snapshot exists (backwards compat for old submissions)
+  const needsLiveQuestions = !!submission && !snapshots?.length;
   const { data: liveQuestions, isLoading: qLoading } = useExamQuestions(
     needsLiveQuestions ? submission?.exam_id : undefined
   );
 
-  // Use snapshots if available; otherwise fall back to live questions
-  const questions = submission?.question_snapshots?.length
-    ? submission.question_snapshots
-    : liveQuestions;
+  // Prefer snapshots (permanent), fall back to live questions
+  const questions = snapshots?.length ? snapshots : liveQuestions;
 
   if (subLoading || (needsLiveQuestions && qLoading)) {
     return (

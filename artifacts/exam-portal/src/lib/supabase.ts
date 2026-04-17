@@ -45,8 +45,7 @@ export interface SupabaseSubmission {
   student_name: string;
   roll_number: string;
   submitted_at: string;
-  student_answers?: Record<string, any>;
-  question_snapshots?: SupabaseQuestion[];
+  student_answers?: Record<string, any>; // also stores __question_snapshots__ for result permanence
 }
 
 export interface StudentProfile {
