@@ -96,15 +96,10 @@ export default function ExamTaking() {
           // Accept if the student's answer contains the key word/phrase (case-insensitive)
           if (givenNorm === correctNorm || givenNorm.includes(correctNorm)) score += q.marks;
         } else if (q.question_type === "code") {
-          // Normalise SQL: lowercase, collapse all whitespace, strip spaces around
-          // commas/parens/operators, remove trailing semicolons
+          // Strip ALL whitespace + trailing semicolons before comparing so
+          // any spacing/capitalisation variation still matches
           const normSql = (s: string) =>
-            s.trim().toLowerCase()
-              .replace(/\s*,\s*/g, ",")
-              .replace(/\s*\(\s*/g, "(")
-              .replace(/\s*\)\s*/g, ")")
-              .replace(/\s+/g, " ")
-              .replace(/;+$/, "");
+            s.toLowerCase().replace(/\s+/g, "").replace(/;+$/, "");
           if (normSql(given) === normSql(q.correct_answer)) score += q.marks;
         }
       }

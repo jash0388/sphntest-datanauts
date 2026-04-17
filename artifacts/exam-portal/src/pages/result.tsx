@@ -119,12 +119,7 @@ export default function Result() {
                    questions.map((q, idx) => {
                       const studentAnswer = submission.student_answers?.[q.id];
                       const normSql = (s: string) =>
-                        s.trim().toLowerCase()
-                          .replace(/\s*,\s*/g, ",")
-                          .replace(/\s*\(\s*/g, "(")
-                          .replace(/\s*\)\s*/g, ")")
-                          .replace(/\s+/g, " ")
-                          .replace(/;+$/, "");
+                        s.toLowerCase().replace(/\s+/g, "").replace(/;+$/, "");
                       const givenNorm = (studentAnswer ?? "").trim().toLowerCase();
                       const correctNorm = (q.correct_answer ?? "").trim().toLowerCase();
                       const isCorrect = studentAnswer
