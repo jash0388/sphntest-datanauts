@@ -86,11 +86,19 @@ export default function ExamTaking() {
       const currentAnswers = answersRef.current;
 
       for (const q of questions) {
-        if (q.question_type === "mcq" && q.correct_answer) {
-          const given = currentAnswers[q.id];
-          if (given && given.trim() === q.correct_answer.trim()) {
-            score += q.marks;
-          }
+        const given = currentAnswers[q.id];
+        if (!given || !q.correct_answer) continue;
+        const givenNorm = given.trim().toLowerCase();
+        const correctNorm = q.correct_answer.trim().toLowerCase();
+        if (q.question_type === "mcq") {
+          if (givenNorm === correctNorm) score += q.marks;
+        } else if (q.question_type === "paragraph") {
+          // Accept if the student's answer contains the key word/phrase (case-insensitive)
+          if (givenNorm === correctNorm || givenNorm.includes(correctNorm)) score += q.marks;
+        } else if (q.question_type === "code") {
+          // Normalise SQL: collapse whitespace, ignore trailing semicolons for comparison
+          const normSql = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/;$/, "");
+          if (normSql(given) === normSql(q.correct_answer)) score += q.marks;
         }
       }
 

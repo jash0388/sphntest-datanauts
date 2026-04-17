@@ -118,7 +118,16 @@ export default function Result() {
                 {questions && questions.length > 0 ? (
                    questions.map((q, idx) => {
                       const studentAnswer = submission.student_answers?.[q.id];
-                      const isCorrect = studentAnswer === q.correct_answer;
+                      const normSql = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/;$/, "");
+                      const givenNorm = (studentAnswer ?? "").trim().toLowerCase();
+                      const correctNorm = (q.correct_answer ?? "").trim().toLowerCase();
+                      const isCorrect = studentAnswer
+                        ? q.question_type === "mcq"
+                          ? givenNorm === correctNorm
+                          : q.question_type === "paragraph"
+                          ? givenNorm === correctNorm || givenNorm.includes(correctNorm)
+                          : normSql(studentAnswer) === normSql(q.correct_answer ?? "")
+                        : false;
                       
                       return (
                         <Card key={q.id} className="bg-card/50 border-border/60 overflow-hidden shadow-sm">
