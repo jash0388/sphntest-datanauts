@@ -96,8 +96,15 @@ export default function ExamTaking() {
           // Accept if the student's answer contains the key word/phrase (case-insensitive)
           if (givenNorm === correctNorm || givenNorm.includes(correctNorm)) score += q.marks;
         } else if (q.question_type === "code") {
-          // Normalise SQL: collapse whitespace, ignore trailing semicolons for comparison
-          const normSql = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/;$/, "");
+          // Normalise SQL: lowercase, collapse all whitespace, strip spaces around
+          // commas/parens/operators, remove trailing semicolons
+          const normSql = (s: string) =>
+            s.trim().toLowerCase()
+              .replace(/\s*,\s*/g, ",")
+              .replace(/\s*\(\s*/g, "(")
+              .replace(/\s*\)\s*/g, ")")
+              .replace(/\s+/g, " ")
+              .replace(/;+$/, "");
           if (normSql(given) === normSql(q.correct_answer)) score += q.marks;
         }
       }
