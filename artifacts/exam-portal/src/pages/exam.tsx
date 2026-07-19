@@ -605,6 +605,15 @@ export default function ExamTaking() {
                     </RadioGroup>
                   )}
 
+                  {q.question_type === "fill_blank" && (
+                    <Input
+                      className="mt-4 bg-card border-border/60 focus-visible:ring-primary text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground/50 rounded-xl py-6"
+                      placeholder="Type your answer here..."
+                      value={answers[q.id] || ""}
+                      onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                    />
+                  )}
+
                   {(q.question_type === "paragraph" || q.question_type === "code") && (
                     <Textarea
                       className="min-h-[160px] sm:min-h-[220px] mt-4 bg-card border-border/60 focus-visible:ring-primary text-sm sm:text-base leading-relaxed resize-y placeholder:text-muted-foreground/50 rounded-xl"
