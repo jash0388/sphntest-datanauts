@@ -2,33 +2,31 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+@theme {
+  --color-background: #0a0a0f;
+  --color-foreground: #e8e8f5;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-input: rgba(255, 255, 255, 0.05);
+  --color-ring: #5b7ef5;
 
-@theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  --color-card: #111118;
+  --color-card-foreground: #e8e8f5;
+  --color-card-border: rgba(255, 255, 255, 0.08);
 
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-card-border: hsl(var(--card-border));
-
-  --color-primary: hsl(var(--primary));
-  --color-on-primary: hsl(var(--primary-foreground));
+  --color-primary: #5b7ef5;
+  --color-primary-foreground: #ffffff;
   
-  --color-secondary: hsl(var(--secondary));
-  --color-on-secondary: hsl(var(--secondary-foreground));
+  --color-secondary: rgba(255, 255, 255, 0.08);
+  --color-secondary-foreground: #e8e8f5;
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted: rgba(255, 255, 255, 0.05);
+  --color-muted-foreground: rgba(255, 255, 255, 0.45);
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent: rgba(255, 255, 255, 0.05);
+  --color-accent-foreground: #5b7ef5;
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #ffffff;
 
   /* Mobile dark surface tokens */
   --color-surface-container: #13131f;
@@ -52,48 +50,18 @@
 }
 
 :root {
-  /* DEFAULT: Original Dark Theme (for Desktop) */
-  --background: 240 10% 4%; 
-  --foreground: 0 0% 98%;
-  --border: 240 6% 15%; 
-  --card: 240 6% 7%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 240 6% 15%;
-  --primary: 230 100% 67%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 240 6% 15%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 6% 15%;
-  --muted-foreground: 240 5% 65%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --input: 240 6% 15%;
-  --ring: 230 100% 67%;
-  --radius: .5rem;
+  --background: #0a0a0f;
+  --foreground: #e8e8f5;
+  --card: #111118;
+  --card-foreground: #e8e8f5;
+  --primary: #5b7ef5;
+  --primary-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.05);
+  --ring: #5b7ef5;
+  --radius: 0.875rem;
 }
 
-/* MOBILE: Premium Dark Theme */
-@media (max-width: 1023px) {
-  :root {
-    --background: 240 20% 4%;      /* #08080f deep black */
-    --foreground: 240 10% 94%;     /* #ebebf5 near white */
-    --card: 240 18% 8%;            /* #0f0f1a dark card */
-    --card-foreground: 240 10% 94%;
-    --card-border: 240 15% 14%;
-    --primary: 225 90% 65%;        /* #4f7ef5 vivid blue */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 245 60% 60%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 15% 12%;
-    --muted-foreground: 240 8% 55%;
-    --accent: 240 15% 12%;
-    --accent-foreground: 225 90% 65%;
-    --border: 240 15% 14%;
-    --input: 240 15% 12%;
-    --ring: 225 90% 65%;
-    --radius: 0.875rem;
-  }
-}
 
 @layer base {
   * { @apply border-border; }

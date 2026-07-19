@@ -26,6 +26,7 @@ export default function ExamTaking() {
   const [rollNumber, setRollNumber] = useState("");
   const [nameError, setNameError] = useState("");
   const [rollError, setRollError] = useState("");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [breachOverlay, setBreachOverlay] = useState(false);
@@ -34,6 +35,19 @@ export default function ExamTaking() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [startTime] = useState(() => Date.now());
   const submitExam = useSubmitExam();
+
+  const [eventLogs, setEventLogs] = useState<string[]>([]);
+  const eventLogsRef = useRef<string[]>([]);
+  const logEvent = useCallback((msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    const entry = `${time}: ${msg}`;
+    eventLogsRef.current = [...eventLogsRef.current.slice(-5), entry];
+    setEventLogs([...eventLogsRef.current]);
+  }, []);
+
+  const [fullscreenError, setFullscreenError] = useState("");
+
+
 
   const violationRef = useRef(0);
   const breachOverlayRef = useRef(false);
@@ -88,12 +102,12 @@ export default function ExamTaking() {
       for (const q of questions) {
         const given = currentAnswers[q.id];
         if (!given || !q.correct_answer) continue;
-        const givenNorm = given.trim().toLowerCase();
-        const correctNorm = q.correct_answer.trim().toLowerCase();
+        const givenNorm = given.trim().toLowerCase().replace(/\s+/g, " ");
+        const correctNorm = q.correct_answer.trim().toLowerCase().replace(/\s+/g, " ");
         if (q.question_type === "mcq") {
           if (givenNorm === correctNorm) score += q.marks;
         } else if (q.question_type === "paragraph") {
-          // Accept if the student's answer contains the key word/phrase (case-insensitive)
+          // Accept if the student's answer matches exactly or contains the correct answer case/space-insensitively
           if (givenNorm === correctNorm || givenNorm.includes(correctNorm)) score += q.marks;
         } else if (q.question_type === "code") {
           // Strip ALL whitespace + trailing semicolons before comparing so
@@ -166,56 +180,143 @@ export default function ExamTaking() {
 
   // Security monitoring (only during in-progress) — uses refs to avoid stale closures
   useEffect(() => {
+    console.log("DEBUG: Security useEffect triggered. phase:", phase, "exam loaded:", !!exam);
     if (phase !== "in-progress" || !exam) return;
 
-    const handleBreach = () => {
-      if (breachOverlayRef.current) return;
+    console.log("DEBUG: Attaching security listeners. Current fullscreenElement:", document.fullscreenElement);
+
+    const handleBreach = (reason: string, force = false) => {
+      logEvent(`Breach logged: ${reason}`);
+      console.log("DEBUG: handleBreach called! reason:", reason, "breachOverlayRef:", breachOverlayRef.current, "force:", force);
+      if (!force && breachOverlayRef.current) return;
       const newCount = violationRef.current + 1;
+      console.log("DEBUG: incrementing violationCount from", violationRef.current, "to", newCount);
       violationRef.current = newCount;
       setViolationCount(newCount);
       breachOverlayRef.current = true;
       setBreachOverlay(true);
 
       if (newCount >= examMaxViolationsRef.current) {
+        console.log("DEBUG: max violations reached, auto-submitting!");
         handleSubmitExamRef.current(true);
         return;
       }
-
-      setTimeout(() => {
-        breachOverlayRef.current = false;
-        setBreachOverlay(false);
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(console.error);
-        }
-      }, 3000);
     };
 
     const onFSChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-      if (!document.fullscreenElement) handleBreach();
+      const activeFS = !!document.fullscreenElement;
+      setIsFullscreen(activeFS);
+      logEvent(`fullscreenchange: ${activeFS ? "Fullscreen Active" : "Fullscreen Exited"}`);
+      if (!activeFS) {
+        handleBreach("Exit Fullscreen");
+      } else {
+        // Dismiss the overlay when entering fullscreen successfully
+        breachOverlayRef.current = false;
+        setBreachOverlay(false);
+      }
     };
-    const onVisibility = () => { if (document.visibilityState === "hidden") handleBreach(); };
-    const onBlur = () => handleBreach();
+    const onVisibility = () => {
+      logEvent(`visibilitychange state: ${document.visibilityState}`);
+      if (document.visibilityState === "hidden") {
+        handleBreach("Tab Hidden / Switch Tab");
+      }
+    };
+    const onBlur = () => {
+      logEvent("window blur event (window lost focus)");
+      handleBreach("Window Lost Focus");
+    };
+
+    // Check initial fullscreen state
+    if (!document.fullscreenElement) {
+      handleBreach("Started without Fullscreen");
+    }
+
+    // Background interval check (failsafe) — forces a breach EVERY second when not in fullscreen
+    // Uses force=true to bypass the breachOverlayRef guard so it always fires
+    const interval = setInterval(() => {
+      if (!document.fullscreenElement) {
+        logEvent("Interval: Not in fullscreen, logging forced breach");
+        handleBreach("Exit Fullscreen (Background Failsafe)", true);
+      }
+    }, 800);
+
+    // Intercept back button / tab changes / reload
+    const handlePopState = (e: PopStateEvent) => {
+      window.history.pushState(null, "", window.location.href);
+      logEvent("popstate event (back button pressed)");
+      handleBreach("Back Button Intercepted");
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      logEvent("beforeunload event (reload attempted)");
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     document.addEventListener("fullscreenchange", onFSChange);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
     return () => {
+      clearInterval(interval);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("fullscreenchange", onFSChange);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
     };
-  }, [phase, exam]);
+  }, [phase, exam, logEvent]);
+
+  const handleResume = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      // Only dismiss if we confirmed fullscreen entry
+      if (document.fullscreenElement) {
+        setBreachOverlay(false);
+        breachOverlayRef.current = false;
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Fullscreen Required",
+          description: "Fullscreen did not activate. Please expand your browser window and try again.",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Fullscreen Required",
+        description: "You must run the exam in fullscreen mode to resume.",
+      });
+    }
+  };
 
   const handleEnterFullscreen = async () => {
+    setFullscreenError("");
+    const isFullscreenSupported = typeof document.documentElement.requestFullscreen === "function";
+
+    if (!isFullscreenSupported) {
+      setPhase("in-progress");
+      return;
+    }
+
     try {
       await document.documentElement.requestFullscreen();
       setIsFullscreen(true);
       setPhase("in-progress");
     } catch (err) {
       console.error(err);
-      // Still proceed even if fullscreen fails (mobile)
-      setPhase("in-progress");
+      setFullscreenError("Fullscreen Blocked: Please expand Chrome to full-screen size (exit side-by-side split screen view) and maximize the window, then click the button again.");
+      toast({
+        variant: "destructive",
+        title: "Fullscreen Blocked",
+        description: "Please exit split-screen mode and maximize Chrome.",
+      });
     }
   };
 
@@ -339,9 +440,15 @@ export default function ExamTaking() {
           <Button size="lg" className="w-full" onClick={handleEnterFullscreen}>
             Enter Fullscreen & Begin
           </Button>
+          {fullscreenError && (
+            <p className="text-sm font-semibold text-destructive mt-3 text-center bg-destructive/10 border border-destructive/20 p-3.5 rounded-xl leading-relaxed">
+              {fullscreenError}
+            </p>
+          )}
           <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setPhase("pre-form")}>
             Edit details
           </button>
+
         </motion.div>
       </div>
     );
@@ -361,9 +468,28 @@ export default function ExamTaking() {
             <p className="text-base sm:text-xl opacity-90 max-w-md font-mono">
               Unauthorized window activity detected. Violation logged.
             </p>
-            <div className="mt-8 text-base font-mono opacity-70">
+            <div className="mt-4 text-base font-mono opacity-70">
               Violations: {violationCount} / {exam.max_violations}
             </div>
+
+            {/* Debug Event Log Panel */}
+            <div className="mt-6 bg-black/30 border border-white/10 rounded-xl p-4 w-full max-w-md text-left font-mono text-xs space-y-1.5">
+              <p className="font-bold text-white/50 border-b border-white/10 pb-1 mb-2">DEBUG SECURITY LOGS:</p>
+              {eventLogs.map((log, i) => (
+                <div key={i} className="text-white/80">{log}</div>
+              ))}
+              {eventLogs.length === 0 && <div className="text-white/40">No events logged yet.</div>}
+            </div>
+
+            {violationCount < exam.max_violations && (
+              <Button
+                type="button"
+                onClick={handleResume}
+                className="mt-6 bg-white text-destructive hover:bg-white/90 font-bold px-6 py-3.5 rounded-xl shadow-lg transition-transform active:scale-[0.98] cursor-pointer"
+              >
+                Re-Authorize & Resume Exam
+              </Button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -416,51 +542,101 @@ export default function ExamTaking() {
       </header>
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-10 pb-24">
-        {questions.map((q, idx) => (
-          <div key={q.id} className="space-y-4">
-            <div className="flex gap-3 sm:gap-4">
-              <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted flex items-center justify-center text-xs sm:text-sm font-bold font-mono border border-border mt-0.5">
-                {idx + 1}
-              </div>
-              <div className="flex-1 min-w-0 space-y-4">
-                <div className="flex justify-between items-start gap-3">
-                  <h3 className="text-base sm:text-lg font-medium leading-relaxed">{q.question}</h3>
-                  <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded border border-border shrink-0">
-                    {q.marks} pts
-                  </span>
+        {/* Progress Text Indicator */}
+        <div className="flex justify-between items-center text-sm font-semibold text-muted-foreground pb-3 border-b border-border/40 mb-6">
+          <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
+          <span className="font-mono text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+            {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% Complete
+          </span>
+        </div>
+
+
+        {/* Current Question */}
+        {(() => {
+          const q = questions[currentQuestionIndex];
+          const idx = currentQuestionIndex;
+          if (!q) return null;
+          return (
+            <div className="space-y-6">
+              <div className="flex gap-3 sm:gap-4">
+                <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xs sm:text-sm font-bold font-mono text-primary mt-0.5">
+                  Q{idx + 1}
                 </div>
+                <div className="flex-1 min-w-0 space-y-5">
+                  <div className="flex justify-between items-start gap-3">
+                    <h3 className="text-lg sm:text-xl font-semibold leading-relaxed text-foreground">{q.question}</h3>
+                    <span className="text-xs font-mono text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-lg border border-border shrink-0">
+                      {q.marks} pts
+                    </span>
+                  </div>
 
-                {q.question_type === "mcq" && q.options && (
-                  <RadioGroup
-                    className="space-y-2 mt-3"
-                    value={answers[q.id] || ""}
-                    onValueChange={(val) => handleAnswerChange(q.id, val)}
+                  {q.question_type === "mcq" && q.options && (
+                    <RadioGroup
+                      className="space-y-3 mt-4"
+                      value={answers[q.id] || ""}
+                      onValueChange={(val) => handleAnswerChange(q.id, val)}
+                    >
+                      {q.options.map((opt, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-center space-x-3 bg-card p-4 rounded-xl border transition-all cursor-pointer active:bg-muted/40 ${
+                            answers[q.id] === opt
+                              ? "border-primary bg-primary/5"
+                              : "border-border/60 hover:border-primary/50"
+                          }`}
+                          onClick={() => handleAnswerChange(q.id, opt)}
+                        >
+                          <RadioGroupItem value={opt} id={`q${q.id}-opt${i}`} />
+                          <Label htmlFor={`q${q.id}-opt${i}`} className="flex-1 text-sm sm:text-base cursor-pointer font-normal leading-relaxed text-foreground">{opt}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+
+                  {(q.question_type === "paragraph" || q.question_type === "code") && (
+                    <Textarea
+                      className="min-h-[160px] sm:min-h-[220px] mt-4 bg-card border-border/60 focus-visible:ring-primary text-sm sm:text-base leading-relaxed resize-y placeholder:text-muted-foreground/50 rounded-xl"
+                      placeholder={q.question_type === "code" ? "Write your code here..." : "Enter your answer here..."}
+                      value={answers[q.id] || ""}
+                      onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Prev / Next Pagination Controls */}
+              <div className="flex justify-between items-center pt-8 border-t border-border/40 mt-8">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={idx === 0}
+                  className="rounded-xl font-bold border-border/60 cursor-pointer"
+                >
+                  Previous
+                </Button>
+                {idx < questions.length - 1 ? (
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentQuestionIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+                    className="rounded-xl font-bold bg-primary text-white cursor-pointer"
                   >
-                    {q.options.map((opt, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center space-x-3 bg-card p-3 sm:p-4 rounded-lg border border-border/50 hover:border-primary/50 transition-colors cursor-pointer active:bg-muted/40"
-                        onClick={() => handleAnswerChange(q.id, opt)}
-                      >
-                        <RadioGroupItem value={opt} id={`q${q.id}-opt${i}`} />
-                        <Label htmlFor={`q${q.id}-opt${i}`} className="flex-1 text-sm sm:text-base cursor-pointer font-normal leading-relaxed">{opt}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                )}
-
-                {(q.question_type === "paragraph" || q.question_type === "code") && (
-                  <Textarea
-                    className="min-h-[140px] sm:min-h-[180px] mt-3 bg-card border-border/50 focus-visible:ring-primary text-sm sm:text-base leading-relaxed resize-y"
-                    placeholder={q.question_type === "code" ? "Write your code here..." : "Enter your answer here..."}
-                    value={answers[q.id] || ""}
-                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                  />
+                    Next Question
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() => handleSubmitExam(false)}
+                    disabled={submitExam.isPending}
+                    className="rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                  >
+                    {submitExam.isPending ? "Submitting..." : "Submit Exam"}
+                  </Button>
                 )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })()}
       </main>
     </div>
   );
