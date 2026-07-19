@@ -64,13 +64,22 @@ export default function ExamTaking() {
     if (existing) setLocation(`/result/${existing.id}`);
   }, [mySubmissions, examId, setLocation]);
 
-  // Pre-fill from profile
+  // Pre-fill from profile or user session
   useEffect(() => {
     if (profile) {
       if (profile.full_name) setStudentName(profile.full_name);
       else if (user?.displayName) setStudentName(user.displayName);
       else if (user?.email) setStudentName(user.email.split("@")[0]);
       if (profile.name) setRollNumber(profile.name);
+    } else if (user) {
+      if (user.displayName) setStudentName(user.displayName);
+      if (user.uid) {
+        if (user.uid.startsWith("roll_")) {
+          setRollNumber(user.uid.replace(/^roll_/, ""));
+        } else {
+          setRollNumber(user.uid);
+        }
+      }
     }
   }, [profile, user]);
 

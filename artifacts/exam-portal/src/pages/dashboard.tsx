@@ -49,10 +49,10 @@ function DesktopDashboard({ user, profile, exams, submissions, stats, submittedE
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 sm:space-y-10">
           <motion.div variants={item}>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              Welcome back, {user?.email?.split("@")[0] || "Scholar"}
+              Welcome back, {user?.displayName || user?.email?.split("@")[0] || "Scholar"}
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {profile ? `Roll Number: ${profile.name}` : user.email}
+              {profile ? `Roll Number: ${profile.name}` : (user?.uid?.startsWith("roll_") ? `Roll Number: ${user.uid.replace(/^roll_/, "")}` : user?.email)}
             </p>
           </motion.div>
 
@@ -228,9 +228,11 @@ function MobileDashboard({ user, profile, exams, submissions, stats, submittedEx
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: "easeOut" }} className="pt-4">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Student Dashboard</p>
           <h1 className="font-headline text-3xl font-extrabold text-foreground tracking-tight">
-            Welcome, {user.email?.split("@")[0]}
+            Welcome, {user.displayName || user.email?.split("@")[0]}
           </h1>
-          {profile && <p className="text-muted-foreground text-sm mt-1">Roll No: {profile.name}</p>}
+          <p className="text-muted-foreground text-sm mt-1">
+            {profile ? `Roll No: ${profile.name}` : (user?.uid?.startsWith("roll_") ? `Roll No: ${user.uid.replace(/^roll_/, "")}` : user.email)}
+          </p>
         </motion.div>
 
         {/* Stats Row */}
@@ -358,6 +360,8 @@ export default function Dashboard() {
   }, [user, authLoading, setLocation]);
 
   const handleLogout = async () => {
+    const { clearRollSession } = await import("@/hooks/useAuth");
+    clearRollSession();
     await signOut(auth);
     setLocation("/");
   };
