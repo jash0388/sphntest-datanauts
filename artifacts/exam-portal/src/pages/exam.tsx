@@ -106,6 +106,9 @@ export default function ExamTaking() {
         const correctNorm = q.correct_answer.trim().toLowerCase().replace(/\s+/g, " ");
         if (q.question_type === "mcq") {
           if (givenNorm === correctNorm) score += q.marks;
+        } else if (q.question_type === "fill_blank") {
+          // Case-insensitive, space-insensitive exact match
+          if (givenNorm === correctNorm) score += q.marks;
         } else if (q.question_type === "paragraph") {
           // Accept if the student's answer matches exactly or contains the correct answer case/space-insensitively
           if (givenNorm === correctNorm || givenNorm.includes(correctNorm)) score += q.marks;
@@ -185,10 +188,10 @@ export default function ExamTaking() {
 
     console.log("DEBUG: Attaching security listeners. Current fullscreenElement:", document.fullscreenElement);
 
-    const handleBreach = (reason: string, force = false) => {
+    const handleBreach = (reason: string) => {
       logEvent(`Breach logged: ${reason}`);
-      console.log("DEBUG: handleBreach called! reason:", reason, "breachOverlayRef:", breachOverlayRef.current, "force:", force);
-      if (!force && breachOverlayRef.current) return;
+      console.log("DEBUG: handleBreach called! reason:", reason, "breachOverlayRef:", breachOverlayRef.current);
+      if (breachOverlayRef.current) return; // already showing overlay — don't double-count
       const newCount = violationRef.current + 1;
       console.log("DEBUG: incrementing violationCount from", violationRef.current, "to", newCount);
       violationRef.current = newCount;
@@ -231,12 +234,12 @@ export default function ExamTaking() {
       handleBreach("Started without Fullscreen");
     }
 
-    // Background interval check (failsafe) — forces a breach EVERY second when not in fullscreen
-    // Uses force=true to bypass the breachOverlayRef guard so it always fires
+    // Background interval check (failsafe) — catches missed events (e.g. Brave shields blocking visibilitychange)
+    // Only fires when NOT already showing the overlay, so violations increment exactly once per breach event
     const interval = setInterval(() => {
-      if (!document.fullscreenElement) {
-        logEvent("Interval: Not in fullscreen, logging forced breach");
-        handleBreach("Exit Fullscreen (Background Failsafe)", true);
+      if (!document.fullscreenElement && !breachOverlayRef.current) {
+        logEvent("Interval: Not in fullscreen, triggering breach");
+        handleBreach("Exit Fullscreen (Interval Failsafe)");
       }
     }, 800);
 
