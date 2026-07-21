@@ -257,15 +257,16 @@ export default function ExamTaking() {
       handleBreach("Window Lost Focus");
     };
 
-    // Check initial fullscreen state
-    if (!document.fullscreenElement) {
+    // Check initial fullscreen state (only on supported devices)
+    const isFSSupported = typeof document.documentElement.requestFullscreen === "function" && !/iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isFSSupported && !document.fullscreenElement) {
       handleBreach("Started without Fullscreen");
     }
 
-    // Background interval check (failsafe) — catches missed events (e.g. Brave shields blocking visibilitychange)
-    // Only fires when NOT already showing the overlay, so violations increment exactly once per breach event
+    // Background interval check (failsafe) — only for devices supporting fullscreen
     const interval = setInterval(() => {
-      if (!document.fullscreenElement && !breachOverlayRef.current) {
+      const isFS = typeof document.documentElement.requestFullscreen === "function" && !/iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isFS && !document.fullscreenElement && !breachOverlayRef.current) {
         logEvent("Interval: Not in fullscreen, triggering breach");
         handleBreach("Exit Fullscreen (Interval Failsafe)");
       }
@@ -302,12 +303,17 @@ export default function ExamTaking() {
   }, [phase, exam, logEvent]);
 
   const handleResume = async () => {
+    const isFSSupported = typeof document.documentElement.requestFullscreen === "function" && !/iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isFSSupported) {
+      setBreachOverlay(false);
+      breachOverlayRef.current = false;
+      return;
+    }
     try {
       if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
+        await document.documentElement.requestFullscreen().catch(() => {});
       }
-      // Only dismiss if we confirmed fullscreen entry
-      if (document.fullscreenElement) {
+      if (document.fullscreenElement || !isFSSupported) {
         setBreachOverlay(false);
         breachOverlayRef.current = false;
       } else {
@@ -319,19 +325,16 @@ export default function ExamTaking() {
       }
     } catch (err) {
       console.error(err);
-      toast({
-        variant: "destructive",
-        title: "Fullscreen Required",
-        description: "You must run the exam in fullscreen mode to resume.",
-      });
+      setBreachOverlay(false);
+      breachOverlayRef.current = false;
     }
   };
 
   const handleEnterFullscreen = async () => {
     setFullscreenError("");
-    const isFullscreenSupported = typeof document.documentElement.requestFullscreen === "function";
+    const isFSSupported = typeof document.documentElement.requestFullscreen === "function" && !/iPad|iPhone|iPod/.test(navigator.userAgent);
 
-    if (!isFullscreenSupported) {
+    if (!isFSSupported) {
       setPhase("in-progress");
       return;
     }
@@ -342,12 +345,8 @@ export default function ExamTaking() {
       setPhase("in-progress");
     } catch (err) {
       console.error(err);
-      setFullscreenError("Fullscreen Blocked: Please expand Chrome to full-screen size (exit side-by-side split screen view) and maximize the window, then click the button again.");
-      toast({
-        variant: "destructive",
-        title: "Fullscreen Blocked",
-        description: "Please exit split-screen mode and maximize Chrome.",
-      });
+      // Fallback for mobile webviews that reject requestFullscreen
+      setPhase("in-progress");
     }
   };
 
