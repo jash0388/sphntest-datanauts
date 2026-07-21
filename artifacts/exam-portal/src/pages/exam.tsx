@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -47,15 +47,34 @@ export default function ExamTaking() {
 
   const [fullscreenError, setFullscreenError] = useState("");
 
-
-
   const violationRef = useRef(0);
   const breachOverlayRef = useRef(false);
   const submittedRef = useRef(false);
 
   const { data: exam, isLoading: examLoading } = useExam(examId);
-  const { data: questions, isLoading: questionsLoading } = useExamQuestions(examId);
+  const { data: rawQuestions, isLoading: questionsLoading } = useExamQuestions(examId);
   const { data: mySubmissions, isLoading: submissionsLoading } = useMySubmissions(user?.uid);
+
+  // Dynamically jumble questions AND options for every student session
+  const questions = useMemo(() => {
+    if (!rawQuestions) return undefined;
+    const shuffled = [...rawQuestions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.map((q) => {
+      if (q.question_type === "mcq" && Array.isArray(q.options) && q.options.length > 0) {
+        const opts = [...q.options];
+        for (let i = opts.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [opts[i], opts[j]] = [opts[j], opts[i]];
+        }
+        return { ...q, options: opts };
+      }
+      return q;
+    });
+  }, [rawQuestions]);
 
   // Redirect if already submitted this exam
   useEffect(() => {

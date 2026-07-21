@@ -1,4 +1,6 @@
 {
+  "buildCommand": "cd artifacts/exam-portal && pnpm install && pnpm run build",
+  "outputDirectory": "artifacts/exam-portal/dist",
   "rewrites": [
     { "source": "/api/auth/roll/send-otp", "destination": "/api/auth/roll/send-otp" },
     { "source": "/api/auth/roll/verify-otp", "destination": "/api/auth/roll/verify-otp" },
