@@ -36,11 +36,20 @@ function DesktopDashboard({ user, profile, exams, submissions, stats, submittedE
             <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain rounded-md" />
             <span className="font-semibold tracking-tight text-sm sm:text-base">SPHN Web Test</span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="hidden sm:block text-right min-w-0">
               <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</p>
               {profile && <p className="text-xs text-foreground font-medium truncate max-w-[180px]">{profile.college}</p>}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 font-semibold text-xs flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
+            </Button>
           </div>
         </div>
       </header>
@@ -373,8 +382,8 @@ export default function Dashboard() {
   const handleLogout = async () => {
     const { clearRollSession } = await import("@/hooks/useAuth");
     clearRollSession();
-    await signOut(auth);
-    setLocation("/");
+    await signOut(auth).catch(() => {});
+    window.location.href = "/";
   };
 
   if (authLoading || !user) return null;
