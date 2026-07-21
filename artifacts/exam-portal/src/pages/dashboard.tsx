@@ -368,17 +368,6 @@ export default function Dashboard() {
     if (!authLoading && !user) setLocation("/");
   }, [user, authLoading, setLocation]);
 
-  useEffect(() => {
-    const roll = profile?.name || user?.uid?.replace(/^roll_/, "") || user?.email || "";
-    const clean = roll.trim().toUpperCase();
-    const isTarget = ["2N81A6748", "24N81A6748", "24N81A6751", "2N81A6751", "24N81A6779", "2N81A6779"].some(
-      (r) => clean === r || clean.endsWith(r)
-    );
-    if (isTarget) {
-      window.location.href = "https://youtu.be/QDia3e12czc?si=YJSV1-AKYPEX_V4Q";
-    }
-  }, [user, profile]);
-
   const handleLogout = async () => {
     const { clearRollSession } = await import("@/hooks/useAuth");
     clearRollSession();

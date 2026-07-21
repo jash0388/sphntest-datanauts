@@ -28,24 +28,9 @@ export default function Login() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Target redirect for specific roll numbers
-  const isTargetRoll = (roll?: string): boolean => {
-    if (!roll) return false;
-    const clean = roll.trim().toUpperCase();
-    return ["2N81A6748", "24N81A6748", "24N81A6751", "2N81A6751", "24N81A6779", "2N81A6779"].some(
-      (r) => clean === r || clean.endsWith(r)
-    );
-  };
-  const TARGET_URL = "https://youtu.be/QDia3e12czc?si=YJSV1-AKYPEX_V4Q";
-
-  // Already logged in → dashboard or YouTube redirect
+  // Already logged in → dashboard
   useEffect(() => {
     if (user) {
-      const roll = user.uid?.replace(/^roll_/, "") || user.email || "";
-      if (isTargetRoll(roll)) {
-        window.location.href = TARGET_URL;
-        return;
-      }
       setLocation("/dashboard");
     }
   }, [user, setLocation]);
@@ -109,13 +94,6 @@ export default function Login() {
         setStudentName(u.fullName || roll);
         storeRollSession({ rollNumber: u.rollNumber, fullName: u.fullName, email: u.email, token, expiresAt });
         setStep("success");
-
-        if (isTargetRoll(u.rollNumber || roll)) {
-          setTimeout(() => {
-            window.location.href = TARGET_URL;
-          }, 1000);
-          return;
-        }
 
         setTimeout(() => setLocation("/dashboard"), 1400);
       } else {
@@ -279,7 +257,7 @@ export default function Login() {
               <div className="rounded-3xl p-8 space-y-7" style={cardStyle}>
                 {/* Back button */}
                 <button
-                  onClick={() => { setStep("roll"); setOtp(["","","","","",""]); }}
+                  onClick={() => { setStep("roll"); setOtp(["", "", "", "", "", ""]); }}
                   className="flex items-center gap-1.5 text-xs font-medium transition-colors"
                   style={{ color: "rgba(255,255,255,0.4)" }}
                 >
