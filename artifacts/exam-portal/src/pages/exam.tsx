@@ -239,6 +239,37 @@ export default function ExamTaking() {
   const examMaxViolationsRef = useRef(exam?.max_violations ?? 3);
   useEffect(() => { if (exam) examMaxViolationsRef.current = exam.max_violations; }, [exam]);
 
+  // ── Screen Wake Lock API (Keep display awake during exam) ─────────────────
+  useEffect(() => {
+    if (phase !== "in-progress") return;
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request("screen");
+          logEvent("Screen Wake Lock activated (display sleep prevented)");
+        }
+      } catch (err) {
+        console.warn("Wake Lock request failed:", err);
+      }
+    };
+    requestWakeLock();
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        await requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+      }
+    };
+  }, [phase, logEvent]);
+
   // Security monitoring (only during in-progress) — uses refs to avoid stale closures
   useEffect(() => {
     console.log("DEBUG: Security useEffect triggered. phase:", phase, "exam loaded:", !!exam);
@@ -269,36 +300,67 @@ export default function ExamTaking() {
       setIsFullscreen(activeFS);
       logEvent(`fullscreenchange: ${activeFS ? "Fullscreen Active" : "Fullscreen Exited"}`);
       if (!activeFS) {
-        handleBreach("Exit Fullscreen");
+        // Attempt immediate auto re-entry into fullscreen
+        if (typeof document.documentElement.requestFullscreen === "function") {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+        handleBreach("Exit Fullscreen Attempted");
       } else {
         // Dismiss the overlay when entering fullscreen successfully
         breachOverlayRef.current = false;
         setBreachOverlay(false);
       }
     };
+
     const onVisibility = () => {
       logEvent(`visibilitychange state: ${document.visibilityState}`);
       if (document.visibilityState === "hidden") {
         handleBreach("Tab Hidden / Switch Tab");
       }
     };
+
     const onBlur = () => {
       logEvent("window blur event (window lost focus)");
       handleBreach("Window Lost Focus");
     };
 
+    // Prevent Right Click, Copy, Cut, Paste, Text Selection
+    const preventAction = (e: Event) => e.preventDefault();
+    document.addEventListener("contextmenu", preventAction);
+    document.addEventListener("copy", preventAction);
+    document.addEventListener("cut", preventAction);
+    document.addEventListener("paste", preventAction);
+    document.addEventListener("selectstart", preventAction);
+
+    // Prevent Keyboard shortcuts (F12, Esc, Alt+Tab, Ctrl+C/V/P/R/S)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && ["c", "v", "p", "r", "s", "u", "a"].includes(e.key.toLowerCase())) ||
+        (e.metaKey && ["c", "v", "p", "r", "s", "u", "a"].includes(e.key.toLowerCase()))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
     // Check initial fullscreen state (only on supported devices)
     const isFSSupported = typeof document.documentElement.requestFullscreen === "function" && !/iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isFSSupported && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
       handleBreach("Started without Fullscreen");
     }
 
-    // Background interval check (failsafe) — only for devices supporting fullscreen
+    // Background interval check (failsafe) — re-requests fullscreen automatically
     const interval = setInterval(() => {
       const isFS = typeof document.documentElement.requestFullscreen === "function" && !/iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isFS && !document.fullscreenElement && !breachOverlayRef.current) {
-        logEvent("Interval: Not in fullscreen, triggering breach");
-        handleBreach("Exit Fullscreen (Interval Failsafe)");
+      if (isFS && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        if (!breachOverlayRef.current) {
+          logEvent("Interval: Not in fullscreen, triggering breach");
+          handleBreach("Exit Fullscreen (Interval Failsafe)");
+        }
       }
     }, 800);
 
@@ -322,6 +384,7 @@ export default function ExamTaking() {
     document.addEventListener("fullscreenchange", onFSChange);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onBlur);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("popstate", handlePopState);
@@ -329,6 +392,12 @@ export default function ExamTaking() {
       document.removeEventListener("fullscreenchange", onFSChange);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onBlur);
+      document.removeEventListener("contextmenu", preventAction);
+      document.removeEventListener("copy", preventAction);
+      document.removeEventListener("cut", preventAction);
+      document.removeEventListener("paste", preventAction);
+      document.removeEventListener("selectstart", preventAction);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [phase, exam, logEvent]);
 
