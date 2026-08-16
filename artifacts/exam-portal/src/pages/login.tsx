@@ -577,20 +577,34 @@ export default function Login() {
                     </div>
                   </div>
 
-                  {/* Roll Number */}
+                  {/* Roll Number Display (Verified from Step 1) */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold tracking-widest uppercase text-white/40">Roll Number / Student ID</label>
-                    <div className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/5 border border-white/10">
-                      <Hash className="w-4 h-4 text-white/30 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="e.g. 24N81A6758"
-                        value={otcRollNumber}
-                        onChange={(e) => setOtcRollNumber(e.target.value.toUpperCase())}
-                        required
-                        className="flex-1 bg-transparent text-sm text-white font-mono tracking-wider outline-none placeholder:text-white/20"
-                      />
-                    </div>
+                    {otcRollNumber || rollNumber ? (
+                      <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-[#5b7ef5]/10 border border-[#5b7ef5]/25">
+                        <div className="flex items-center gap-3">
+                          <Hash className="w-4 h-4 text-[#5b7ef5] shrink-0" />
+                          <span className="text-sm font-mono tracking-wider font-bold text-white">
+                            {otcRollNumber || rollNumber}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono font-bold tracking-widest text-[#5b7ef5] bg-[#5b7ef5]/20 px-2 py-0.5 rounded border border-[#5b7ef5]/30 uppercase">
+                          ✓ Verified
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/5 border border-white/10">
+                        <Hash className="w-4 h-4 text-white/30 shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="e.g. 24N81A6758"
+                          value={otcRollNumber}
+                          onChange={(e) => setOtcRollNumber(e.target.value.toUpperCase())}
+                          required
+                          className="flex-1 bg-transparent text-sm text-white font-mono tracking-wider outline-none placeholder:text-white/20"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Branch Selection Dropdown */}
