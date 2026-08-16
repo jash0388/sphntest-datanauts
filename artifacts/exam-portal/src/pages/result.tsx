@@ -176,8 +176,20 @@ export default function Result() {
           </motion.div>
 
           <motion.div variants={item} className="flex justify-center pt-8 pb-10">
-            <Button onClick={() => setLocation("/dashboard")} className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/10">
-              Return to Home
+            <Button
+              onClick={async () => {
+                const { getStoredRollSession, clearRollSession } = await import("@/hooks/useAuth");
+                const session = getStoredRollSession();
+                if (session?.isOtcUser) {
+                  clearRollSession();
+                  window.location.href = "/";
+                } else {
+                  setLocation("/dashboard");
+                }
+              }}
+              className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/10"
+            >
+              Finish & Exit Session
             </Button>
           </motion.div>
 

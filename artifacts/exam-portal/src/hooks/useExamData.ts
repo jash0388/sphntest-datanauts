@@ -53,10 +53,11 @@ export function useMySubmissions(userId: string | undefined) {
     queryKey: ["submissions", userId],
     enabled: !!userId,
     queryFn: async () => {
+      const rollNum = userId?.startsWith("roll_") ? userId.replace(/^roll_/, "") : userId;
       const { data, error } = await supabase
         .from("exam_submissions")
         .select("*, exams(title)")
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userId},roll_number.eq.${rollNum}`)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as (SupabaseSubmission & { exams: { title: string } | null })[];

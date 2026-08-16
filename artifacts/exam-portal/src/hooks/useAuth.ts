@@ -7,6 +7,7 @@ export interface RollSession {
   fullName: string;
   email: string;
   token: string;
+  isOtcUser?: boolean;
 }
 
 // A fake Firebase-User-shaped object built from a Rubrix session
@@ -33,7 +34,7 @@ function makeVirtualUser(s: RollSession): User {
   } as unknown as User;
 }
 
-function getStoredRollSession(): RollSession | null {
+export function getStoredRollSession(): RollSession | null {
   try {
     const raw = localStorage.getItem('sphn_roll_session');
     if (!raw) return null;

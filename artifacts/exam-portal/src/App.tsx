@@ -11,6 +11,7 @@ import Exam from "@/pages/exam";
 import Result from "@/pages/result";
 import Metrics from "@/pages/metrics";
 import Profile from "@/pages/profile";
+import Admin from "@/pages/admin";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/result/:attemptId" component={Result} />
       <Route path="/metrics" component={Metrics} />
       <Route path="/profile" component={Profile} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

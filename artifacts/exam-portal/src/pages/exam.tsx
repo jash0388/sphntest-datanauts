@@ -14,6 +14,37 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type ExamPhase = "pre-form" | "instructions" | "in-progress";
 
+// Helper functions for deterministic seeded PRNG shuffle per roll number
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function createPRNG(seed: number) {
+  let s = seed || 1;
+  return function () {
+    let t = (s += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle<T>(arr: T[], seedStr: string): T[] {
+  const result = [...arr];
+  const rand = createPRNG(hashString(seedStr));
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export default function ExamTaking() {
   const { examId } = useParams<{ examId: string }>();
   const [, setLocation] = useLocation();
@@ -55,26 +86,25 @@ export default function ExamTaking() {
   const { data: rawQuestions, isLoading: questionsLoading } = useExamQuestions(examId);
   const { data: mySubmissions, isLoading: submissionsLoading } = useMySubmissions(user?.uid);
 
-  // Dynamically jumble questions AND options for every student session
+  // Deterministically shuffle questions AND options based on roll number & examId
   const questions = useMemo(() => {
     if (!rawQuestions) return undefined;
-    const shuffled = [...rawQuestions];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled.map((q) => {
+    const effectiveRoll = (rollNumber || user?.uid || "student").trim().toUpperCase();
+    const seedKey = `${effectiveRoll}_${examId || "exam"}`;
+    
+    // Seeded shuffle of questions
+    const shuffledQuestions = seededShuffle(rawQuestions, seedKey);
+
+    // Seeded shuffle of options for each MCQ question
+    return shuffledQuestions.map((q) => {
       if (q.question_type === "mcq" && Array.isArray(q.options) && q.options.length > 0) {
-        const opts = [...q.options];
-        for (let i = opts.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [opts[i], opts[j]] = [opts[j], opts[i]];
-        }
-        return { ...q, options: opts };
+        const optionSeed = `${seedKey}_q_${q.id}`;
+        const shuffledOpts = seededShuffle(q.options, optionSeed);
+        return { ...q, options: shuffledOpts };
       }
       return q;
     });
-  }, [rawQuestions]);
+  }, [rawQuestions, rollNumber, user?.uid, examId]);
 
   // Redirect if already submitted this exam
   useEffect(() => {
