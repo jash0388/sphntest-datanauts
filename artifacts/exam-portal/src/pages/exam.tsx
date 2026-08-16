@@ -743,35 +743,49 @@ export default function ExamTaking() {
               </div>
 
               {/* Prev / Next Pagination Controls */}
-              <div className="flex justify-between items-center pt-8 border-t border-border/40 mt-8">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
-                  disabled={idx === 0}
-                  className="rounded-xl font-bold border-border/60 cursor-pointer"
-                >
-                  Previous
-                </Button>
-                {idx < questions.length - 1 ? (
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentQuestionIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-                    className="rounded-xl font-bold bg-primary text-white cursor-pointer"
-                  >
-                    Next Question
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() => handleSubmitExam(false)}
-                    disabled={submitExam.isPending}
-                    className="rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                  >
-                    {submitExam.isPending ? "Submitting..." : "Submit Exam"}
-                  </Button>
-                )}
-              </div>
+              {(() => {
+                const isPreviousDisabled = Boolean(
+                  (exam as any)?.disable_previous ||
+                  exam?.description?.includes("[NO_PREVIOUS]")
+                );
+                return (
+                  <div className="flex justify-between items-center pt-8 border-t border-border/40 mt-8">
+                    {!isPreviousDisabled ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+                        disabled={idx === 0}
+                        className="rounded-xl font-bold border-border/60 cursor-pointer"
+                      >
+                        Previous
+                      </Button>
+                    ) : (
+                      <div className="text-xs font-mono font-bold text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg border border-border/40 flex items-center gap-1.5 select-none">
+                        <span>🔒</span> Sequential Navigation (No Back)
+                      </div>
+                    )}
+                    {idx < questions.length - 1 ? (
+                      <Button
+                        type="button"
+                        onClick={() => setCurrentQuestionIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+                        className="rounded-xl font-bold bg-primary text-white cursor-pointer"
+                      >
+                        Next Question
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => handleSubmitExam(false)}
+                        disabled={submitExam.isPending}
+                        className="rounded-xl font-bold bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                      >
+                        {submitExam.isPending ? "Submitting..." : "Submit Exam"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
