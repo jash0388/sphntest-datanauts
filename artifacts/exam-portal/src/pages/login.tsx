@@ -223,7 +223,7 @@ export default function Login() {
   const handleOtcDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullName = otcFullName.trim();
-    const roll = otcRollNumber.trim().toUpperCase();
+    const roll = (rollNumber || otcRollNumber || "").trim().toUpperCase();
     if (!fullName || !roll) {
       toast({ variant: "destructive", title: "Incomplete", description: "Please fill in all details." });
       return;

@@ -195,6 +195,10 @@ export default function ExamTaking() {
         })),
       };
 
+      const effectiveRoll = (rollNumber || profile?.name || user?.uid?.replace(/^roll_/, "") || "").trim().toUpperCase() || "N/A";
+      const effectiveEmail = user?.email || (effectiveRoll !== "N/A" ? `${effectiveRoll.toLowerCase()}@datanauts.in` : "N/A");
+      const formattedStudentName = `${studentName || "Student"} (${effectiveEmail})`;
+
       submitExam.mutate({
         user_id: user.uid,
         exam_id: exam.id,
@@ -203,8 +207,8 @@ export default function ExamTaking() {
         violations: violationRef.current,
         time_used_seconds: timeTaken,
         status: forced ? "terminated" : "completed",
-        student_name: studentName || user.email || "Unknown",
-        roll_number: rollNumber,
+        student_name: formattedStudentName,
+        roll_number: effectiveRoll,
         student_answers: answersWithSnapshots,
       }, {
         onSuccess: (sub) => {
