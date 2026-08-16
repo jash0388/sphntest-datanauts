@@ -133,14 +133,14 @@ export default function Result() {
                    questions.map((q, idx) => {
                       const studentAnswer = submission.student_answers?.[q.id];
                       const normSql = (s: string) =>
-                        s.toLowerCase().replace(/\s+/g, "").replace(/;+$/, "");
+                        (s || "").toLowerCase().replace(/"/g, "'").replace(/\s+/g, "").replace(/;+$/, "");
                       const givenNorm = (studentAnswer ?? "").trim().toLowerCase();
                       const correctNorm = (q.correct_answer ?? "").trim().toLowerCase();
                       const isCorrect = studentAnswer
                         ? q.question_type === "mcq"
                           ? givenNorm === correctNorm
                           : q.question_type === "paragraph"
-                          ? givenNorm === correctNorm || givenNorm.includes(correctNorm)
+                          ? givenNorm === correctNorm || givenNorm.includes(correctNorm) || normSql(studentAnswer) === normSql(q.correct_answer ?? "")
                           : normSql(studentAnswer) === normSql(q.correct_answer ?? "")
                         : false;
                       

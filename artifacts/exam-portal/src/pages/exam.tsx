@@ -162,19 +162,16 @@ export default function ExamTaking() {
         if (!given || !q.correct_answer) continue;
         const givenNorm = given.trim().toLowerCase().replace(/\s+/g, " ");
         const correctNorm = q.correct_answer.trim().toLowerCase().replace(/\s+/g, " ");
+        const normSql = (s: string) =>
+          (s || "").toLowerCase().replace(/"/g, "'").replace(/\s+/g, "").replace(/;+$/, "");
+
         if (q.question_type === "mcq") {
           if (givenNorm === correctNorm) score += q.marks;
         } else if (q.question_type === "fill_blank") {
-          // Case-insensitive, space-insensitive exact match
-          if (givenNorm === correctNorm) score += q.marks;
+          if (normSql(given) === normSql(q.correct_answer)) score += q.marks;
         } else if (q.question_type === "paragraph") {
-          // Accept if the student's answer matches exactly or contains the correct answer case/space-insensitively
-          if (givenNorm === correctNorm || givenNorm.includes(correctNorm)) score += q.marks;
+          if (givenNorm === correctNorm || givenNorm.includes(correctNorm) || normSql(given) === normSql(q.correct_answer)) score += q.marks;
         } else if (q.question_type === "code") {
-          // Strip ALL whitespace + trailing semicolons before comparing so
-          // any spacing/capitalisation variation still matches
-          const normSql = (s: string) =>
-            s.toLowerCase().replace(/\s+/g, "").replace(/;+$/, "");
           if (normSql(given) === normSql(q.correct_answer)) score += q.marks;
         }
       }
