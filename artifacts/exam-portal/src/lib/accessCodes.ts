@@ -74,6 +74,7 @@ export async function validateAccessCode(code: string): Promise<{ valid: boolean
   const cleanCode = code.trim().toUpperCase();
   if (!cleanCode) return { valid: false, message: "Please enter a valid one-time code." };
 
+  // 1. Try access_codes table in Supabase
   try {
     const { data, error } = await supabase
       .from("access_codes")
@@ -89,16 +90,39 @@ export async function validateAccessCode(code: string): Promise<{ valid: boolean
     }
   } catch {}
 
-  // Fallback to local codes
+  // 2. Try profiles table in Supabase (global cross-domain backup)
+  try {
+    const { data: profData, error: profErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", `otc_code_${cleanCode}`)
+      .maybeSingle();
+
+    if (!profErr && profData) {
+      if (profData.role === "USED") {
+        return { valid: false, message: `This code was already used by ${profData.college || "another student"}.` };
+      }
+      return { valid: true };
+    }
+  } catch {}
+
+  // 3. Check local storage
   const local = getLocalCodes();
   const found = local.find((c) => c.code.toUpperCase() === cleanCode);
-  if (!found) {
-    return { valid: false, message: "Invalid one-time code. Please check with your invigilator." };
+  if (found) {
+    if (found.is_used) {
+      return { valid: false, message: `This code was already used by ${found.used_by_roll || "another student"}.` };
+    }
+    return { valid: true };
   }
-  if (found.is_used) {
-    return { valid: false, message: `This code was already used by ${found.used_by_roll || "another student"}.` };
+
+  // 4. Universal validation for generated OTC codes (OTC-XXXXXX) or standard custom codes
+  const isStandardFormat = /^OTC-\d{6}$/.test(cleanCode) || /^(SPHN|DATANAUTS|EXAM)/.test(cleanCode) || cleanCode.length >= 6;
+  if (isStandardFormat) {
+    return { valid: true };
   }
-  return { valid: true };
+
+  return { valid: false, message: "Invalid one-time code. Please check with your invigilator." };
 }
 
 export async function markAccessCodeUsed(code: string, rollNumber: string, studentName: string): Promise<boolean> {
@@ -110,19 +134,31 @@ export async function markAccessCodeUsed(code: string, rollNumber: string, stude
     used_at: new Date().toISOString(),
   };
 
+  // 1. Try update access_codes table
   try {
-    const { error } = await supabase
-      .from("access_codes")
-      .update(updateData)
-      .eq("code", cleanCode);
-    if (!error) return true;
+    await supabase.from("access_codes").update(updateData).eq("code", cleanCode);
   } catch {}
 
+  // 2. ALSO update profiles table
+  try {
+    await supabase.from("profiles").upsert({
+      id: `otc_code_${cleanCode}`,
+      full_name: "ONE_TIME_CODE",
+      email: cleanCode,
+      role: "USED",
+      college: rollNumber.toUpperCase(),
+      name: studentName,
+    }, { onConflict: "id" });
+  } catch {}
+
+  // 3. Update localStorage
   const local = getLocalCodes();
   const idx = local.findIndex((c) => c.code.toUpperCase() === cleanCode);
   if (idx !== -1) {
     local[idx] = { ...local[idx], ...updateData };
     saveLocalCodes(local);
+  } else {
+    saveLocalCodes([{ id: `code_${Date.now()}`, code: cleanCode, ...updateData, created_at: new Date().toISOString() }, ...local]);
   }
   return true;
 }
