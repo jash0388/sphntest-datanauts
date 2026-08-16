@@ -13,12 +13,13 @@ import {
   ArrowLeft,
   CheckCircle2,
   Key,
-  HelpCircle,
-  X,
   User,
   BookOpen,
   Building,
-  KeyRound
+  KeyRound,
+  Lock,
+  Zap,
+  BarChart3
 } from "lucide-react";
 
 type AuthMode = "rubrix" | "otc";
@@ -45,47 +46,34 @@ export default function Login() {
   const [authMode, setAuthMode] = useState<AuthMode>("rubrix");
   const [step, setStep] = useState<Step>("roll");
 
-  // Rubrix Auth State
   const [rollNumber, setRollNumber] = useState("");
   const [studentName, setStudentName] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // OTC Auth State
   const [accessCodeInput, setAccessCodeInput] = useState("");
   const [otcFullName, setOtcFullName] = useState("");
   const [otcRollNumber, setOtcRollNumber] = useState("");
   const [otcBranch, setOtcBranch] = useState("DS");
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
-  // Already logged in → dashboard
   useEffect(() => {
-    if (user) {
-      setLocation("/dashboard");
-    }
+    if (user) setLocation("/dashboard");
   }, [user, setLocation]);
 
-  // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
-  // Handle Auth Mode switch
   const handleModeSwitch = (mode: AuthMode) => {
     setAuthMode(mode);
-    if (mode === "rubrix") {
-      setStep("roll");
-    } else {
-      setStep("otc_code");
-    }
+    setStep(mode === "rubrix" ? "roll" : "otc_code");
   };
 
-  // ── Send OTP via Rubrix ──────────────────────────────────────────────────────
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     const roll = rollNumber.trim().toUpperCase();
@@ -116,7 +104,6 @@ export default function Login() {
     }
   };
 
-  // ── Verify OTP ───────────────────────────────────────────────────────────────
   const handleVerifyOTP = async (otpStr?: string) => {
     const code = otpStr ?? otp.join("");
     if (code.length !== 6) {
@@ -150,7 +137,6 @@ export default function Login() {
     }
   };
 
-  // ── OTP input handlers ───────────────────────────────────────────────────────
   const handleOtpChange = (i: number, val: string) => {
     const digit = val.replace(/\D/g, "").slice(-1);
     const next = [...otp];
@@ -195,7 +181,6 @@ export default function Login() {
     }
   };
 
-  // ── Handle OTC Verification ──────────────────────────────────────────────────
   const handleVerifyOTC = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCode = accessCodeInput.trim().toUpperCase();
@@ -219,7 +204,6 @@ export default function Login() {
     }
   };
 
-  // ── Handle OTC Details Submission ─────────────────────────────────────────────
   const handleOtcDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullName = otcFullName.trim();
@@ -228,13 +212,9 @@ export default function Login() {
       toast({ variant: "destructive", title: "Incomplete", description: "Please fill in all details." });
       return;
     }
-
     setIsLoading(true);
     try {
-      // Mark code as used
       await markAccessCodeUsed(accessCodeInput, roll, fullName);
-
-      // Create / upsert profile in Supabase
       const uid = `roll_${roll}`;
       await supabase.from("profiles").upsert(
         {
@@ -249,8 +229,6 @@ export default function Login() {
         },
         { onConflict: "id" }
       );
-
-      // Store Roll Session for student with isOtcUser flag
       const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
       storeRollSession({
         rollNumber: roll,
@@ -260,7 +238,6 @@ export default function Login() {
         isOtcUser: true,
         expiresAt,
       });
-
       setStudentName(fullName);
       setStep("success");
       setTimeout(() => setLocation("/dashboard"), 1400);
@@ -272,66 +249,125 @@ export default function Login() {
     }
   };
 
-  // ── Shared Card Style ────────────────────────────────────────────────────────
-  const cardStyle = {
-    backgroundColor: "#111118",
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(79,126,245,0.06)",
-  };
+  // ── Shared right-panel form card style (white/light)
+  const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-gray-400";
+  const btnCls = "w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative" style={{ backgroundColor: "#0a0a0f" }}>
-      {/* Ambient Glow */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-20"
-          style={{ background: "radial-gradient(ellipse, #4f7ef5 0%, transparent 70%)", filter: "blur(60px)" }}
-        />
+    <div className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+
+      {/* ── LEFT PANEL ── */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-[48%] relative overflow-hidden p-10"
+        style={{
+          background: "linear-gradient(135deg, #0ea5e9 0%, #06b6d4 35%, #10b981 70%, #34d399 100%)",
+        }}
+      >
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)",
+          backgroundSize: "40px 40px"
+        }} />
+
+        {/* Glow blobs */}
+        <div className="absolute top-20 right-20 w-64 h-64 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #ffffff 0%, transparent 70%)", filter: "blur(40px)" }} />
+        <div className="absolute bottom-32 left-10 w-48 h-48 rounded-full opacity-15" style={{ background: "radial-gradient(circle, #ffffff 0%, transparent 70%)", filter: "blur(50px)" }} />
+
+        {/* Top logo */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center border border-white/30">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <p className="font-bold text-white text-lg leading-none">SPHN Online</p>
+            <p className="text-white/70 text-xs mt-0.5">DataNauts Hub · Exam Portal</p>
+          </div>
+        </div>
+
+        {/* Hero text */}
+        <div className="relative z-10 space-y-6">
+          <div>
+            <h1 className="text-4xl font-black text-white leading-tight">
+              Your gateway to<br />
+              <span className="text-white/90">secure online</span><br />
+              assessments.
+            </h1>
+            <p className="text-white/75 text-sm mt-4 leading-relaxed max-w-xs">
+              A modern testing portal built for students and faculty — fair, focused, and reliable from registration to result.
+            </p>
+          </div>
+
+          {/* Feature bullets */}
+          <div className="space-y-3">
+            {[
+              { icon: Lock, title: "Secure proctored testing", desc: "Tab-switch detection, timer, and auto-submit keep every exam fair." },
+              { icon: BarChart3, title: "Instant results & analytics", desc: "See scores, attempt counts, and per-question answers right after submission." },
+              { icon: BookOpen, title: "Mock tests & practice papers", desc: "EAPCET-style mocks, custom college tests, and shift-wise practice rounds." },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <Icon className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">{title}</p>
+                  <p className="text-white/60 text-xs mt-0.5">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer credit */}
+        <div className="relative z-10 space-y-1">
+          <p className="text-white/50 text-xs">Version 17.05.21</p>
+          <p className="text-white/60 text-xs">© 2026 Sphoorthy Engineering College</p>
+          <p className="text-white/50 text-xs">Powered by <span className="font-bold text-white/80">BigBrains</span> · DataNauts Hub</p>
+        </div>
       </div>
 
-      <div className="w-full max-w-[420px] relative z-10 space-y-4">
-        
-        <AnimatePresence mode="wait">
+      {/* ── RIGHT PANEL ── */}
+      <div className="flex-1 bg-white flex items-center justify-center p-6 lg:p-12">
+        <div className="w-full max-w-[400px]">
 
-          {/* ── Step 1: Roll Number (Rubrix Mode) ── */}
-          {step === "roll" && (
-            <motion.div
-              key="roll"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="rounded-3xl p-8 space-y-7" style={cardStyle}>
-                {/* Logo */}
-                <div className="flex flex-col items-center gap-4">
-                  <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg,#1a1a35 0%,#0f1128 100%)", border: "1px solid rgba(79,126,245,0.3)", boxShadow: "0 0 30px rgba(79,126,245,0.15)" }}
-                  >
-                    <Shield className="w-8 h-8" style={{ color: "#5b7ef5" }} />
-                  </div>
-                  <div className="text-center">
-                    <h1 className="text-2xl font-bold text-white tracking-tight">
-                      SPHN <span style={{ color: "#5b7ef5" }}>Online</span>
-                    </h1>
-                    <p className="text-xs mt-1 font-medium tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
-                      DataNauts Hub · Secure Exam Portal
-                    </p>
-                  </div>
+          {/* Mobile logo */}
+          <div className="flex lg:hidden items-center gap-2 mb-8">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0ea5e9, #10b981)" }}>
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-gray-900 text-lg">SPHN <span style={{ color: "#0ea5e9" }}>Online</span></span>
+          </div>
+
+          <AnimatePresence mode="wait">
+
+            {/* ── Roll Number Step ── */}
+            {step === "roll" && (
+              <motion.div key="roll" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.22 }}>
+                <div className="mb-8">
+                  <h2 className="text-2xl font-black text-gray-900">Welcome back 👋</h2>
+                  <p className="text-gray-500 text-sm mt-1">Sign in to continue to your exams.</p>
                 </div>
 
-                {/* Form */}
+                {/* Mode tabs */}
+                <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+                  <button
+                    onClick={() => handleModeSwitch("rubrix")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === "rubrix" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}
+                  >
+                    Rubrix Login
+                  </button>
+                  <button
+                    onClick={() => handleModeSwitch("otc")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === "otc" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}
+                  >
+                    Access Code
+                  </button>
+                </div>
+
                 <form onSubmit={handleSendOTP} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Roll Number
-                    </label>
-                    <div
-                      className="flex items-center gap-3 rounded-xl px-4 py-3.5"
-                      style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
-                    >
-                      <Hash className="w-4 h-4 shrink-0" style={{ color: "rgba(255,255,255,0.3)" }} />
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Roll Number</label>
+                    <div className="relative">
+                      <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
                         placeholder="e.g. 24N81A6758"
@@ -342,7 +378,7 @@ export default function Login() {
                         }}
                         required
                         autoComplete="off"
-                        className="flex-1 bg-transparent text-sm text-white font-mono tracking-widest placeholder:text-[rgba(255,255,255,0.25)] placeholder:font-sans placeholder:tracking-normal outline-none"
+                        className={`${inputCls} pl-10 font-mono tracking-widest`}
                       />
                     </div>
                   </div>
@@ -350,62 +386,49 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-                    style={{ background: "linear-gradient(135deg,#5b7ef5 0%,#4466e0 100%)", boxShadow: "0 4px 24px rgba(79,126,245,0.45)" }}
+                    className={btnCls}
+                    style={{ background: "linear-gradient(135deg, #0ea5e9 0%, #10b981 100%)", boxShadow: "0 4px 20px rgba(14,165,233,0.4)" }}
                   >
-                    {isLoading ? (
-                      <RefreshCw className="animate-spin w-4 h-4" />
-                    ) : (
-                      <>Send OTP <ArrowRight className="w-4 h-4" /></>
-                    )}
+                    {isLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <><span>Send OTP</span> <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </form>
 
-                <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                <p className="text-center text-xs text-gray-400 mt-5">
                   Enter your Rubrix roll number — OTP will be sent to your registered email
                 </p>
-              </div>
-            </motion.div>
-          )}
 
-          {/* ── Step 2: OTP Verification ── */}
-          {step === "otp" && (
-            <motion.div
-              key="otp"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="rounded-3xl p-8 space-y-7" style={cardStyle}>
-                {/* Back button */}
-                <button
-                  onClick={() => { setStep("roll"); setOtp(["", "", "", "", "", ""]); }}
-                  className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
-                >
+                <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+                  <p className="text-xs text-gray-400">Don't have Rubrix access?</p>
+                  <button
+                    onClick={() => handleModeSwitch("otc")}
+                    className="text-xs font-semibold mt-1 transition-colors"
+                    style={{ color: "#0ea5e9" }}
+                  >
+                    Use One-Time Access Code instead →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── OTP Step ── */}
+            {step === "otp" && (
+              <motion.div key="otp" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.22 }}>
+                <button onClick={() => { setStep("roll"); setOtp(["", "", "", "", "", ""]); }} className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors mb-8">
                   <ArrowLeft className="w-3.5 h-3.5" /> Back
                 </button>
 
-                <div className="flex flex-col items-center gap-4">
-                  <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg,#1a1a35 0%,#0f1128 100%)", border: "1px solid rgba(79,126,245,0.3)", boxShadow: "0 0 30px rgba(79,126,245,0.15)" }}
-                  >
+                <div className="mb-8">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #e0f2fe, #d1fae5)" }}>
                     <span className="text-2xl">📧</span>
                   </div>
-                  <div className="text-center">
-                    <h2 className="text-xl font-bold text-white">Check your email</h2>
-                    <p className="text-xs mt-1.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
-                      A 6-digit code was sent to your<br />
-                      registered email for{" "}
-                      <span className="font-bold text-white/70 font-mono">{rollNumber}</span>
-                    </p>
-                  </div>
+                  <h2 className="text-2xl font-black text-gray-900">Check your email</h2>
+                  <p className="text-gray-500 text-sm mt-1.5">
+                    A 6-digit code was sent to your registered email for{" "}
+                    <span className="font-bold text-gray-800 font-mono">{rollNumber}</span>
+                  </p>
                 </div>
 
-                {/* OTP boxes */}
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-2 mb-6">
                   {otp.map((digit, i) => (
                     <input
                       key={i}
@@ -417,95 +440,69 @@ export default function Login() {
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
                       onPaste={i === 0 ? handleOtpPaste : undefined}
-                      className="w-11 h-14 text-center text-2xl font-bold rounded-xl text-white outline-none transition-all duration-200"
+                      className="w-12 h-14 text-center text-xl font-bold rounded-xl outline-none transition-all duration-200 border-2"
                       style={{
-                        backgroundColor: "rgba(255,255,255,0.05)",
-                        border: digit ? "1px solid rgba(91,126,245,0.7)" : "1px solid rgba(255,255,255,0.09)",
-                        boxShadow: digit ? "0 0 12px rgba(91,126,245,0.2)" : "none",
+                        backgroundColor: digit ? "#f0f9ff" : "#f9fafb",
+                        borderColor: digit ? "#0ea5e9" : "#e5e7eb",
+                        color: "#0c4a6e",
+                        boxShadow: digit ? "0 0 0 3px rgba(14,165,233,0.15)" : "none",
                       }}
                     />
                   ))}
                 </div>
 
-                {/* Manual verify button */}
                 <button
                   onClick={() => handleVerifyOTP()}
                   disabled={isLoading || otp.join("").length !== 6}
-                  className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg,#5b7ef5 0%,#4466e0 100%)", boxShadow: "0 4px 24px rgba(79,126,245,0.45)" }}
+                  className={`${btnCls} disabled:opacity-50`}
+                  style={{ background: "linear-gradient(135deg, #0ea5e9 0%, #10b981 100%)", boxShadow: "0 4px 20px rgba(14,165,233,0.4)" }}
                 >
                   {isLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <>Verify & Login <ArrowRight className="w-4 h-4" /></>}
                 </button>
 
-                {/* Resend & Help */}
-                <div className="space-y-2 text-center pt-1">
+                <div className="space-y-2 text-center pt-4">
                   <button
                     onClick={handleResend}
                     disabled={resendCooldown > 0 || isLoading}
-                    className="text-xs font-semibold py-1 disabled:opacity-40 transition-colors block w-full text-center"
-                    style={{ color: "#5b7ef5" }}
+                    className="text-xs font-semibold disabled:opacity-40 transition-colors"
+                    style={{ color: "#0ea5e9" }}
                   >
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep("otc_code");
-                      setAccessCodeInput("");
-                      if (!otcRollNumber && rollNumber) setOtcRollNumber(rollNumber);
-                    }}
-                    className="text-xs font-medium text-[#5b7ef5] hover:underline transition-colors flex items-center justify-center gap-1.5 mx-auto pt-2"
-                  >
-                    <HelpCircle className="w-4 h-4" /> Didn't receive OTP? Contact Help / Enter Code
-                  </button>
+                  <div>
+                    <button
+                      onClick={() => { setStep("otc_code"); setAccessCodeInput(""); if (!otcRollNumber && rollNumber) setOtcRollNumber(rollNumber); }}
+                      className="text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors block mx-auto"
+                    >
+                      Didn't receive OTP? Use Access Code →
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* ── Contact Help / Access Code Entry ── */}
-          {step === "otc_code" && (
-            <motion.div
-              key="otc_code"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="rounded-3xl p-8 space-y-6" style={cardStyle}>
-                <button
-                  onClick={() => setStep("otp")}
-                  className="flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white transition-colors"
-                >
+            {/* ── Access Code Entry ── */}
+            {step === "otc_code" && (
+              <motion.div key="otc_code" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.22 }}>
+                <button onClick={() => setStep("otp")} className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors mb-8">
                   <ArrowLeft className="w-3.5 h-3.5" /> Back to Email OTP
                 </button>
 
-                <div className="flex flex-col items-center gap-4">
-                  <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg,#1a1a35 0%,#0f1128 100%)", border: "1px solid rgba(79,126,245,0.3)", boxShadow: "0 0 30px rgba(79,126,245,0.15)" }}
-                  >
-                    <Key className="w-8 h-8" style={{ color: "#5b7ef5" }} />
+                <div className="mb-8">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #fef3c7, #d1fae5)" }}>
+                    <Key className="w-7 h-7" style={{ color: "#f59e0b" }} />
                   </div>
-                  <div className="text-center">
-                    <h2 className="text-xl font-bold text-white">Contact Help / Enter Access Code</h2>
-                    <p className="text-xs mt-1.5 leading-relaxed text-white/50">
-                      Didn't receive email OTP? Enter your one-time access code provided by your exam invigilator.
-                    </p>
-                  </div>
+                  <h2 className="text-2xl font-black text-gray-900">Enter Access Code</h2>
+                  <p className="text-gray-500 text-sm mt-1.5">
+                    Enter your one-time access code provided by your exam invigilator.
+                  </p>
                 </div>
 
                 <form onSubmit={handleVerifyOTC} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold tracking-widest uppercase text-white/40">
-                      One-Time Access Code
-                    </label>
-                    <div
-                      className="flex items-center gap-3 rounded-xl px-4 py-3.5"
-                      style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(79,126,245,0.3)" }}
-                    >
-                      <KeyRound className="w-4 h-4 shrink-0 text-[#5b7ef5]" />
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">One-Time Access Code</label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400" />
                       <input
                         type="text"
                         placeholder="e.g. SPHN2026 or OTC-749201"
@@ -513,7 +510,7 @@ export default function Login() {
                         onChange={(e) => setAccessCodeInput(e.target.value.toUpperCase())}
                         required
                         autoComplete="off"
-                        className="flex-1 bg-transparent text-sm text-white font-mono tracking-widest placeholder:text-white/25 placeholder:font-sans placeholder:tracking-normal outline-none"
+                        className={`${inputCls} pl-10 font-mono tracking-widest`}
                       />
                     </div>
                   </div>
@@ -521,106 +518,86 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-                    style={{ background: "linear-gradient(135deg,#5b7ef5 0%,#4466e0 100%)", boxShadow: "0 4px 24px rgba(79,126,245,0.45)" }}
+                    className={btnCls}
+                    style={{ background: "linear-gradient(135deg, #f59e0b 0%, #10b981 100%)", boxShadow: "0 4px 20px rgba(245,158,11,0.35)" }}
                   >
-                    {isLoading ? <RefreshCw className="animate-spin w-4 h-4 text-white" /> : <span className="font-bold flex items-center gap-2">Verify Code & Proceed <ArrowRight className="w-4 h-4" /></span>}
+                    {isLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <><span>Verify Code & Proceed</span> <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </form>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* ── Student Identity Details ── */}
-          {step === "otc_details" && (
-            <motion.div
-              key="otc_details"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="rounded-3xl p-8 space-y-6" style={cardStyle}>
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setStep("otc_code")}
-                    className="flex items-center gap-1 text-xs text-white/50 hover:text-white"
-                  >
+            {/* ── Student Details ── */}
+            {step === "otc_details" && (
+              <motion.div key="otc_details" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.22 }}>
+                <div className="flex items-center justify-between mb-8">
+                  <button onClick={() => setStep("otc_code")} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
                     <ArrowLeft className="w-3.5 h-3.5" /> Back
                   </button>
-                  <span className="text-[10px] font-mono font-bold text-[#5b7ef5] bg-[#5b7ef5]/10 px-2.5 py-1 rounded-md border border-[#5b7ef5]/20">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border" style={{ color: "#0ea5e9", backgroundColor: "#f0f9ff", borderColor: "#bae6fd" }}>
                     CODE: {accessCodeInput}
                   </span>
                 </div>
 
-                <div>
-                  <h2 className="text-xl font-bold text-white">Student Information</h2>
-                  <p className="text-xs text-white/50 mt-1">
-                    Enter your details to generate your exam session.
-                  </p>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black text-gray-900">Student Information</h2>
+                  <p className="text-gray-500 text-sm mt-1">Enter your details to generate your exam session.</p>
                 </div>
 
                 <form onSubmit={handleOtcDetailsSubmit} className="space-y-4">
-                  {/* Full Name */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold tracking-widest uppercase text-white/40">Full Name</label>
-                    <div className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/5 border border-white/10">
-                      <User className="w-4 h-4 text-white/30 shrink-0" />
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Full Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
                         placeholder="Enter your full name"
                         value={otcFullName}
                         onChange={(e) => setOtcFullName(e.target.value)}
                         required
-                        className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/20"
+                        className={`${inputCls} pl-10`}
                       />
                     </div>
                   </div>
 
-                  {/* Roll Number Display (Verified from Step 1) */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold tracking-widest uppercase text-white/40">Roll Number / Student ID</label>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Roll Number / Student ID</label>
                     {otcRollNumber || rollNumber ? (
-                      <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-[#5b7ef5]/10 border border-[#5b7ef5]/25">
+                      <div className="flex items-center justify-between rounded-xl px-4 py-3 border-2" style={{ backgroundColor: "#f0fdf4", borderColor: "#86efac" }}>
                         <div className="flex items-center gap-3">
-                          <Hash className="w-4 h-4 text-[#5b7ef5] shrink-0" />
-                          <span className="text-sm font-mono tracking-wider font-bold text-white">
-                            {otcRollNumber || rollNumber}
-                          </span>
+                          <Hash className="w-4 h-4 shrink-0" style={{ color: "#16a34a" }} />
+                          <span className="text-sm font-mono tracking-wider font-bold text-gray-900">{otcRollNumber || rollNumber}</span>
                         </div>
-                        <span className="text-[9px] font-mono font-bold tracking-widest text-[#5b7ef5] bg-[#5b7ef5]/20 px-2 py-0.5 rounded border border-[#5b7ef5]/30 uppercase">
+                        <span className="text-[9px] font-bold tracking-widest px-2 py-0.5 rounded border uppercase" style={{ color: "#16a34a", backgroundColor: "#dcfce7", borderColor: "#86efac" }}>
                           ✓ Verified
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/5 border border-white/10">
-                        <Hash className="w-4 h-4 text-white/30 shrink-0" />
+                      <div className="relative">
+                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
                           placeholder="e.g. 24N81A6758"
                           value={otcRollNumber}
                           onChange={(e) => setOtcRollNumber(e.target.value.toUpperCase())}
                           required
-                          className="flex-1 bg-transparent text-sm text-white font-mono tracking-wider outline-none placeholder:text-white/20"
+                          className={`${inputCls} pl-10 font-mono tracking-widest`}
                         />
                       </div>
                     )}
                   </div>
 
-                  {/* Branch Selection Dropdown */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold tracking-widest uppercase text-white/40">Branch / Department</label>
-                    <div className="flex items-center gap-3 rounded-xl px-4 py-3 bg-white/5 border border-white/10">
-                      <Building className="w-4 h-4 text-white/30 shrink-0" />
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Branch / Department</label>
+                    <div className="relative">
+                      <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <select
                         value={otcBranch}
                         onChange={(e) => setOtcBranch(e.target.value)}
-                        className="flex-1 bg-transparent text-xs text-white outline-none cursor-pointer"
+                        className={`${inputCls} pl-10 cursor-pointer appearance-none`}
                       >
                         {BRANCH_OPTIONS.map((b) => (
-                          <option key={b.value} value={b.value} className="bg-[#111118] text-white">
-                            {b.label}
-                          </option>
+                          <option key={b.value} value={b.value}>{b.label}</option>
                         ))}
                       </select>
                     </div>
@@ -629,97 +606,48 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
-                    style={{ background: "linear-gradient(135deg,#5b7ef5 0%,#4466e0 100%)", boxShadow: "0 4px 24px rgba(79,126,245,0.45)" }}
+                    className={`${btnCls} mt-2`}
+                    style={{ background: "linear-gradient(135deg, #0ea5e9 0%, #10b981 100%)", boxShadow: "0 4px 20px rgba(14,165,233,0.4)" }}
                   >
                     {isLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <>Start Exam Session <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </form>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* ── Step 3: Success Screen ── */}
-          {step === "success" && (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-            >
-              <div className="rounded-3xl p-10 flex flex-col items-center gap-5 text-center" style={cardStyle}>
-                <CheckCircle2 className="w-16 h-16" style={{ color: "#22c55e" }} />
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    Welcome, {studentName.split(" ")[0]}! 👋
-                  </h2>
-                  <p className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    Preparing your exam workspace…
-                  </p>
+            {/* ── Success ── */}
+            {step === "success" && (
+              <motion.div key="success" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+                <div className="flex flex-col items-center gap-5 text-center py-8">
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #d1fae5, #a7f3d0)" }}>
+                    <CheckCircle2 className="w-10 h-10" style={{ color: "#10b981" }} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900">
+                      Welcome, {studentName.split(" ")[0]}! 👋
+                    </h2>
+                    <p className="text-sm mt-1.5 text-gray-500">Preparing your exam workspace…</p>
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="w-2 h-2 rounded-full animate-bounce" style={{ background: "#10b981", animationDelay: `${i * 0.15}s` }} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-        </AnimatePresence>
+          </AnimatePresence>
 
+          {/* Footer on right side */}
+          <div className="mt-10 text-center lg:hidden">
+            <p className="text-xs text-gray-400">© 2026 Sphoorthy Engineering College</p>
+            <p className="text-xs text-gray-400 mt-0.5">Powered by <span className="font-bold text-gray-500">BigBrains</span> · DataNauts Hub</p>
+          </div>
+
+        </div>
       </div>
 
-      {/* ── OTP Help Modal / Overlay ── */}
-      {showHelpModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#141420] border border-white/10 rounded-3xl p-6 max-w-sm w-full text-white space-y-5 shadow-2xl relative"
-          >
-            <button
-              onClick={() => setShowHelpModal(false)}
-              className="absolute top-4 right-4 text-white/40 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <HelpCircle className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base">OTP Support & Help</h3>
-                <p className="text-xs text-white/50">Troubleshooting code issues</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs leading-relaxed text-white/80">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <p className="font-bold text-white mb-1">1. Check Spam / Junk Folder</p>
-                <p className="text-white/60">OTP emails from Rubrix may take up to 60 seconds or land in your spam folder.</p>
-              </div>
-
-              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <p className="font-bold text-white mb-1">2. Contact Invigilator / Help Desk</p>
-                <p className="text-white/60">If you still haven't received it, request a <strong>One-Time Access Code</strong> from your invigilator or email <span className="text-blue-400 font-mono">support@datanauts.in</span>.</p>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => { setShowHelpModal(false); setStep("roll"); }}
-                className="flex-1 border-white/10 text-xs text-white hover:bg-white/10"
-              >
-                Re-enter Roll No.
-              </Button>
-              <Button
-                onClick={() => { setShowHelpModal(false); handleModeSwitch("otc"); }}
-                className="flex-1 bg-yellow-500 text-black hover:bg-yellow-400 text-xs font-bold"
-              >
-                Use Access Code
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }
