@@ -615,7 +615,7 @@ export default function Login() {
           {/* Footer on mobile right view */}
           <div className="mt-8 text-center lg:hidden space-y-1">
             <p className="text-xs text-slate-400">© 2026 Sphoorthy Engineering College</p>
-            <p className="text-xs text-slate-400">Powered by <strong className="text-slate-600 font-bold">BigBrains</strong> · DataNauts Hub</p>
+            <p className="text-xs text-slate-400">Powered by <strong className="text-slate-600 font-bold">BigBrains</strong> · DataNauts Club</p>
           </div>
 
         </div>

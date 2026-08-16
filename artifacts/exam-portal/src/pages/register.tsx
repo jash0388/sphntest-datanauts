@@ -204,7 +204,7 @@ export default function Register() {
       is_firebase_user: true,
     } as any, {
       onSuccess: () => {
-        toast({ title: "Enrollment Complete", description: "Welcome to DataNauts Hub." });
+        toast({ title: "Enrollment Complete", description: "Welcome to DataNauts Club." });
         setLocation("/dashboard");
       },
       onError: async (err: any) => {
