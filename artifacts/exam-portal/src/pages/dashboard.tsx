@@ -58,8 +58,8 @@ export default function Dashboard() {
               <img src="/logo.png" alt="Sphoorthy College Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="font-extrabold text-slate-900 text-base leading-tight block">Sphoorthy Online</span>
-              <span className="text-[11px] font-semibold text-slate-500 block">Student Exam Portal</span>
+              <span className="font-extrabold text-slate-900 text-base leading-tight block">Sphoorthy Engineering College</span>
+              <span className="text-[11px] font-semibold text-slate-500 block">Online Examination Portal</span>
             </div>
           </div>
 

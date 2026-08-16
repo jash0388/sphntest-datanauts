@@ -476,60 +476,60 @@ export default function ExamTaking() {
   // ─── Phase 1: Name + Roll Number form ────────────────────────────────────────
   if (phase === "pre-form") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="max-w-sm w-full space-y-6"
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl space-y-6"
         >
-          <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-              <User className="w-7 h-7 text-primary" />
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm p-1.5 flex items-center justify-center mx-auto mb-2 overflow-hidden">
+              <img src="/logo.png" alt="Sphoorthy College Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">{exam.title}</h1>
-            <p className="text-muted-foreground text-sm">Confirm your identity before starting</p>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">{exam.title}</h1>
+            <p className="text-slate-500 text-xs font-semibold">Confirm your identity before starting</p>
           </div>
 
           <form onSubmit={handlePreFormSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Full Name</label>
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">FULL NAME</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
-                  className="pl-9 bg-card"
+                  className="pl-10 bg-slate-50 border border-slate-200 text-slate-900 font-medium rounded-xl text-sm"
                   placeholder="Enter your full name"
                   value={studentName}
                   onChange={(e) => { setStudentName(e.target.value); setNameError(""); }}
                 />
               </div>
-              {nameError && <p className="text-xs text-destructive">{nameError}</p>}
+              {nameError && <p className="text-xs text-red-600 font-semibold">{nameError}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Roll Number / Student ID</label>
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">ROLL NUMBER / STUDENT ID</label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
-                  className="pl-9 bg-card font-mono"
-                  placeholder="e.g. CS-2024-001"
+                  className="pl-10 bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold rounded-xl text-sm tracking-wider"
+                  placeholder="e.g. 24N81A6758"
                   value={rollNumber}
                   onChange={(e) => { setRollNumber(e.target.value); setRollError(""); }}
                 />
               </div>
-              {rollError && <p className="text-xs text-destructive">{rollError}</p>}
+              {rollError && <p className="text-xs text-red-600 font-semibold">{rollError}</p>}
             </div>
 
-            <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-muted-foreground space-y-1">
-              <p><span className="text-foreground font-medium">Duration:</span> {exam.duration_minutes} minutes</p>
-              <p><span className="text-foreground font-medium">Questions:</span> {questions.length}</p>
-              <p><span className="text-foreground font-medium">Max violations:</span> {exam.max_violations} (auto-terminates)</p>
+            <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 text-xs text-slate-700 space-y-1.5 font-medium">
+              <p><span className="text-slate-900 font-bold">Duration:</span> {exam.duration_minutes} minutes</p>
+              <p><span className="text-slate-900 font-bold">Questions:</span> {questions.length}</p>
+              <p><span className="text-slate-900 font-bold">Max violations:</span> {exam.max_violations} (auto-terminates)</p>
             </div>
 
-            <Button type="submit" className="w-full" size="lg">
+            <Button type="submit" size="lg" className="w-full bg-gradient-to-r from-[#1d4ed8] to-[#0284c7] hover:from-[#1e40af] hover:to-[#0369a1] text-white font-bold rounded-xl shadow-md shadow-blue-500/20">
               Confirm & Continue
             </Button>
-            <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={() => setLocation("/dashboard")}>
+            <Button type="button" variant="ghost" className="w-full text-slate-500 hover:text-slate-800 font-semibold" onClick={() => setLocation("/dashboard")}>
               Cancel
             </Button>
           </form>
@@ -541,47 +541,46 @@ export default function ExamTaking() {
   // ─── Phase 2: Instructions + fullscreen prompt ────────────────────────────────
   if (phase === "instructions") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="max-w-sm w-full text-center space-y-6"
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-6"
         >
-          <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mx-auto">
-            <AlertTriangle className="w-8 h-8 text-yellow-500" />
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8 text-amber-600" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-bold tracking-tight">Ready to Begin?</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">Ready to Begin?</h2>
+            <p className="text-slate-500 text-xs leading-relaxed font-medium">
               This exam requires fullscreen mode. Exiting fullscreen or switching tabs is logged as a security violation.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-xs">
             {[
               { label: "Student", value: studentName },
               { label: "Roll No.", value: rollNumber },
               { label: "Duration", value: `${exam.duration_minutes} min` },
               { label: "Violations", value: `0 / ${exam.max_violations}` },
             ].map((item) => (
-              <div key={item.label} className="bg-muted/50 rounded-lg p-3 border border-border text-left">
-                <p className="text-muted-foreground text-xs mb-0.5">{item.label}</p>
-                <p className="font-medium text-sm truncate">{item.value}</p>
+              <div key={item.label} className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-left">
+                <p className="text-slate-400 text-[10px] font-bold uppercase mb-0.5">{item.label}</p>
+                <p className="font-bold text-slate-900 text-xs truncate">{item.value}</p>
               </div>
             ))}
           </div>
-          <Button size="lg" className="w-full" onClick={handleEnterFullscreen}>
+          <Button size="lg" className="w-full bg-gradient-to-r from-[#1d4ed8] to-[#0284c7] hover:from-[#1e40af] hover:to-[#0369a1] text-white font-bold rounded-xl shadow-md shadow-blue-500/20" onClick={handleEnterFullscreen}>
             Enter Fullscreen & Begin
           </Button>
           {fullscreenError && (
-            <p className="text-sm font-semibold text-destructive mt-3 text-center bg-destructive/10 border border-destructive/20 p-3.5 rounded-xl leading-relaxed">
+            <p className="text-xs font-semibold text-red-600 mt-3 text-center bg-red-50 border border-red-200 p-3 rounded-xl leading-relaxed">
               {fullscreenError}
             </p>
           )}
-          <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setPhase("pre-form")}>
+          <button className="text-xs font-semibold text-slate-400 hover:text-slate-700" onClick={() => setPhase("pre-form")}>
             Edit details
           </button>
-
         </motion.div>
       </div>
     );
@@ -589,12 +588,12 @@ export default function ExamTaking() {
 
   // ─── Phase 3: Exam in progress ────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col cursor-default select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col cursor-default select-none font-sans">
       <AnimatePresence>
         {breachOverlay && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-destructive flex flex-col items-center justify-center text-destructive-foreground p-6 text-center"
+            className="fixed inset-0 z-50 bg-red-600 flex flex-col items-center justify-center text-white p-6 text-center"
           >
             <ShieldAlert className="w-16 h-16 sm:w-20 sm:h-20 mb-6 animate-pulse" />
             <h1 className="text-3xl sm:text-5xl font-black tracking-tighter mb-3">INTEGRITY BREACH</h1>
@@ -618,7 +617,7 @@ export default function ExamTaking() {
               <Button
                 type="button"
                 onClick={handleResume}
-                className="mt-6 bg-white text-destructive hover:bg-white/90 font-bold px-6 py-3.5 rounded-xl shadow-lg transition-transform active:scale-[0.98] cursor-pointer"
+                className="mt-6 bg-white text-red-600 hover:bg-white/90 font-bold px-6 py-3.5 rounded-xl shadow-lg transition-transform active:scale-[0.98] cursor-pointer"
               >
                 Re-Authorize & Resume Exam
               </Button>
