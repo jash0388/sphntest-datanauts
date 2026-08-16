@@ -541,14 +541,21 @@ export default function Login() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1.5">ROLL NUMBER</label>
-                      <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-emerald-50 border border-emerald-200">
-                        <span className="text-sm font-mono tracking-wider font-bold text-slate-900">
-                          {otcRollNumber || rollNumber}
-                        </span>
-                        <span className="text-[9px] font-bold tracking-widest px-2 py-0.5 rounded text-emerald-700 bg-emerald-100 border border-emerald-300 uppercase">
-                          ✓ Verified
-                        </span>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1.5">ROLL NUMBER / STUDENT ID</label>
+                      <div className="relative">
+                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. 24N81A6758"
+                          value={otcRollNumber || rollNumber}
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase();
+                            setOtcRollNumber(val);
+                            setRollNumber(val);
+                          }}
+                          required
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-mono font-bold tracking-wider text-slate-900 outline-none focus:bg-white focus:border-[#1d4ed8] transition-all"
+                        />
                       </div>
                     </div>
 
