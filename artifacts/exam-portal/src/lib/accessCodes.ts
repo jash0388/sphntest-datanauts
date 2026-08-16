@@ -10,27 +10,15 @@ export interface AccessCode {
   created_at: string;
 }
 
-// Fallback initial codes stored in localStorage if Supabase table is absent
 const LOCAL_STORAGE_KEY = "sphn_access_codes";
-
-const DEFAULT_CODES: AccessCode[] = [
-  { id: "1", code: "SPHN2026", is_used: false, created_at: new Date().toISOString() },
-  { id: "2", code: "DATANAUTS100", is_used: false, created_at: new Date().toISOString() },
-  { id: "3", code: "EXAM2026", is_used: false, created_at: new Date().toISOString() },
-  { id: "4", code: "OTC-749201", is_used: false, created_at: new Date().toISOString() },
-  { id: "5", code: "OTC-881923", is_used: false, created_at: new Date().toISOString() },
-];
 
 function getLocalCodes(): AccessCode[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_CODES));
-      return DEFAULT_CODES;
-    }
+    if (!raw) return [];
     return JSON.parse(raw);
   } catch {
-    return DEFAULT_CODES;
+    return [];
   }
 }
 
@@ -64,8 +52,20 @@ export async function generateNewAccessCode(customCode?: string): Promise<Access
     if (!error && data) return data as AccessCode;
   } catch {}
 
+  // Save to profiles as backup
+  try {
+    await supabase.from("profiles").upsert({
+      id: `otc_code_${codeStr}`,
+      full_name: "ONE_TIME_CODE",
+      email: codeStr,
+      role: "AVAILABLE",
+      college: "",
+      name: "",
+    }, { onConflict: "id" });
+  } catch {}
+
   const local = getLocalCodes();
-  const updated = [newObj, ...local];
+  const updated = [newObj, ...local.filter(c => c.code !== codeStr)];
   saveLocalCodes(updated);
   return newObj;
 }
@@ -74,7 +74,7 @@ export async function validateAccessCode(code: string): Promise<{ valid: boolean
   const cleanCode = code.trim().toUpperCase();
   if (!cleanCode) return { valid: false, message: "Please enter a valid one-time code." };
 
-  // 1. Try access_codes table in Supabase
+  // 1. Check access_codes table in Supabase
   try {
     const { data, error } = await supabase
       .from("access_codes")
@@ -90,7 +90,7 @@ export async function validateAccessCode(code: string): Promise<{ valid: boolean
     }
   } catch {}
 
-  // 2. Try profiles table in Supabase (global cross-domain backup)
+  // 2. Check profiles table in Supabase (cross-domain synced backup)
   try {
     const { data: profData, error: profErr } = await supabase
       .from("profiles")
@@ -116,12 +116,7 @@ export async function validateAccessCode(code: string): Promise<{ valid: boolean
     return { valid: true };
   }
 
-  // 4. Universal validation for generated OTC codes (OTC-XXXXXX) or standard custom codes
-  const isStandardFormat = /^OTC-\d{6}$/.test(cleanCode) || /^(SPHN|DATANAUTS|EXAM)/.test(cleanCode) || cleanCode.length >= 6;
-  if (isStandardFormat) {
-    return { valid: true };
-  }
-
+  // REJECT ALL UNRECOGNIZED CODES - Strictly require code to be created by Admin
   return { valid: false, message: "Invalid one-time code. Please check with your invigilator." };
 }
 
@@ -134,12 +129,12 @@ export async function markAccessCodeUsed(code: string, rollNumber: string, stude
     used_at: new Date().toISOString(),
   };
 
-  // 1. Try update access_codes table
+  // 1. Update access_codes table
   try {
     await supabase.from("access_codes").update(updateData).eq("code", cleanCode);
   } catch {}
 
-  // 2. ALSO update profiles table
+  // 2. Update profiles table
   try {
     await supabase.from("profiles").upsert({
       id: `otc_code_${cleanCode}`,
@@ -157,8 +152,6 @@ export async function markAccessCodeUsed(code: string, rollNumber: string, stude
   if (idx !== -1) {
     local[idx] = { ...local[idx], ...updateData };
     saveLocalCodes(local);
-  } else {
-    saveLocalCodes([{ id: `code_${Date.now()}`, code: cleanCode, ...updateData, created_at: new Date().toISOString() }, ...local]);
   }
   return true;
 }
