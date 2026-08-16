@@ -372,21 +372,6 @@ export default function Login() {
                       )}
                     </button>
                   </form>
-
-                  {/* Access Code / Contact Help Link */}
-                  <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStep("otc_code");
-                        setAccessCodeInput("");
-                        if (!otcRollNumber && rollNumber) setOtcRollNumber(rollNumber);
-                      }}
-                      className="text-xs font-semibold text-[#1d4ed8] hover:text-[#1e40af] hover:underline transition-colors"
-                    >
-                      Contact Help / Enter One-Time Access Code →
-                    </button>
-                  </div>
                 </motion.div>
               )}
 
@@ -444,13 +429,13 @@ export default function Login() {
                     {isLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <>Verify & Login <ArrowRight className="w-4 h-4" /></>}
                   </button>
 
-                  <div className="mt-5 text-center space-y-2">
+                  <div className="mt-5 text-center space-y-2 pt-2 border-t border-slate-100">
                     <button
                       onClick={handleResend}
                       disabled={resendCooldown > 0 || isLoading}
                       className="text-xs font-semibold text-[#1d4ed8] disabled:opacity-40"
                     >
-                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP Code"}
                     </button>
                     <div>
                       <button
@@ -460,9 +445,9 @@ export default function Login() {
                           setAccessCodeInput("");
                           if (!otcRollNumber && rollNumber) setOtcRollNumber(rollNumber);
                         }}
-                        className="text-xs font-medium text-slate-400 hover:text-slate-600"
+                        className="text-xs font-semibold text-[#1d4ed8] hover:text-[#1e40af] hover:underline transition-colors block mx-auto pt-1"
                       >
-                        Contact Help / Enter Code →
+                        Didn't receive OTP? Contact Help / Enter Code →
                       </button>
                     </div>
                   </div>
