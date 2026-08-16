@@ -264,9 +264,9 @@ export default function Login() {
         />
 
         {/* Top Header Logo */}
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2.5">
-            <Shield className="w-full h-full text-[#1d4ed8]" />
+        <div className="relative z-10 flex items-center gap-3.5">
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg p-1.5 shrink-0 border border-white/20 overflow-hidden">
+            <img src="/logo.png" alt="Sphoorthy Engineering College Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <p className="font-extrabold text-white text-lg tracking-tight leading-none">Sphoorthy Engineering College</p>
