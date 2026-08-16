@@ -291,32 +291,6 @@ export default function Login() {
 
       <div className="w-full max-w-[420px] relative z-10 space-y-4">
         
-        {/* Mode Selector Tabs (only on initial step) */}
-        {(step === "roll" || step === "otc_code") && (
-          <div className="flex bg-[#111118] p-1.5 rounded-2xl border border-white/10 shadow-lg">
-            <button
-              onClick={() => handleModeSwitch("rubrix")}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                authMode === "rubrix"
-                  ? "bg-[#5b7ef5] text-white shadow-md"
-                  : "text-white/50 hover:text-white"
-              }`}
-            >
-              <Hash className="w-3.5 h-3.5" /> Roll Number & OTP
-            </button>
-            <button
-              onClick={() => handleModeSwitch("otc")}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                authMode === "otc"
-                  ? "bg-[#5b7ef5] text-white shadow-md"
-                  : "text-white/50 hover:text-white"
-              }`}
-            >
-              <Key className="w-3.5 h-3.5" /> One-Time Code
-            </button>
-          </div>
-        )}
-
         <AnimatePresence mode="wait">
 
           {/* ── Step 1: Roll Number (Rubrix Mode) ── */}
@@ -362,7 +336,10 @@ export default function Login() {
                         type="text"
                         placeholder="e.g. 24N81A6758"
                         value={rollNumber}
-                        onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          setRollNumber(e.target.value.toUpperCase());
+                          if (!otcRollNumber) setOtcRollNumber(e.target.value.toUpperCase());
+                        }}
                         required
                         autoComplete="off"
                         className="flex-1 bg-transparent text-sm text-white font-mono tracking-widest placeholder:text-[rgba(255,255,255,0.25)] placeholder:font-sans placeholder:tracking-normal outline-none"
@@ -461,7 +438,7 @@ export default function Login() {
                 </button>
 
                 {/* Resend & Help */}
-                <div className="space-y-2 text-center">
+                <div className="space-y-2 text-center pt-1">
                   <button
                     onClick={handleResend}
                     disabled={resendCooldown > 0 || isLoading}
@@ -473,17 +450,21 @@ export default function Login() {
 
                   <button
                     type="button"
-                    onClick={() => setShowHelpModal(true)}
-                    className="text-[11px] font-medium text-white/40 hover:text-white/80 transition-colors flex items-center justify-center gap-1 mx-auto"
+                    onClick={() => {
+                      setStep("otc_code");
+                      setAccessCodeInput("");
+                      if (!otcRollNumber && rollNumber) setOtcRollNumber(rollNumber);
+                    }}
+                    className="text-xs font-medium text-[#5b7ef5] hover:underline transition-colors flex items-center justify-center gap-1.5 mx-auto pt-2"
                   >
-                    <HelpCircle className="w-3.5 h-3.5" /> Didn't receive OTP? Contact Help
+                    <HelpCircle className="w-4 h-4" /> Didn't receive OTP? Contact Help / Enter Code
                   </button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* ── Step 1 (OTC Mode): Access Code Entry ── */}
+          {/* ── Contact Help / Access Code Entry ── */}
           {step === "otc_code" && (
             <motion.div
               key="otc_code"
@@ -492,18 +473,25 @@ export default function Login() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              <div className="rounded-3xl p-8 space-y-7" style={cardStyle}>
+              <div className="rounded-3xl p-8 space-y-6" style={cardStyle}>
+                <button
+                  onClick={() => setStep("otp")}
+                  className="flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to Email OTP
+                </button>
+
                 <div className="flex flex-col items-center gap-4">
                   <div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg,#2e2609 0%,#1a1505 100%)", border: "1px solid rgba(234,179,8,0.3)", boxShadow: "0 0 30px rgba(234,179,8,0.15)" }}
+                    style={{ background: "linear-gradient(135deg,#1a1a35 0%,#0f1128 100%)", border: "1px solid rgba(79,126,245,0.3)", boxShadow: "0 0 30px rgba(79,126,245,0.15)" }}
                   >
-                    <Key className="w-8 h-8 text-yellow-500" />
+                    <Key className="w-8 h-8" style={{ color: "#5b7ef5" }} />
                   </div>
                   <div className="text-center">
-                    <h2 className="text-xl font-bold text-white">Enter One-Time Code</h2>
-                    <p className="text-xs mt-1 leading-relaxed text-white/50">
-                      Enter the one-time access code provided by your exam invigilator.
+                    <h2 className="text-xl font-bold text-white">Contact Help / Enter Access Code</h2>
+                    <p className="text-xs mt-1.5 leading-relaxed text-white/50">
+                      Didn't receive email OTP? Enter your one-time access code provided by your exam invigilator.
                     </p>
                   </div>
                 </div>
@@ -511,13 +499,13 @@ export default function Login() {
                 <form onSubmit={handleVerifyOTC} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold tracking-widest uppercase text-white/40">
-                      One-Time Code
+                      One-Time Access Code
                     </label>
                     <div
                       className="flex items-center gap-3 rounded-xl px-4 py-3.5"
-                      style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                      style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(79,126,245,0.3)" }}
                     >
-                      <KeyRound className="w-4 h-4 shrink-0 text-yellow-500/70" />
+                      <KeyRound className="w-4 h-4 shrink-0 text-[#5b7ef5]" />
                       <input
                         type="text"
                         placeholder="e.g. SPHN2026 or OTC-749201"
@@ -525,7 +513,7 @@ export default function Login() {
                         onChange={(e) => setAccessCodeInput(e.target.value.toUpperCase())}
                         required
                         autoComplete="off"
-                        className="flex-1 bg-transparent text-sm text-yellow-400 font-mono tracking-widest placeholder:text-white/20 placeholder:font-sans placeholder:tracking-normal outline-none"
+                        className="flex-1 bg-transparent text-sm text-white font-mono tracking-widest placeholder:text-white/25 placeholder:font-sans placeholder:tracking-normal outline-none"
                       />
                     </div>
                   </div>
@@ -534,16 +522,16 @@ export default function Login() {
                     type="submit"
                     disabled={isLoading}
                     className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
-                    style={{ background: "linear-gradient(135deg,#eab308 0%,#ca8a04 100%)", boxShadow: "0 4px 24px rgba(234,179,8,0.35)" }}
+                    style={{ background: "linear-gradient(135deg,#5b7ef5 0%,#4466e0 100%)", boxShadow: "0 4px 24px rgba(79,126,245,0.45)" }}
                   >
-                    {isLoading ? <RefreshCw className="animate-spin w-4 h-4 text-black" /> : <span className="text-black font-bold flex items-center gap-2">Verify Code & Enter <ArrowRight className="w-4 h-4" /></span>}
+                    {isLoading ? <RefreshCw className="animate-spin w-4 h-4 text-white" /> : <span className="font-bold flex items-center gap-2">Verify Code & Proceed <ArrowRight className="w-4 h-4" /></span>}
                   </button>
                 </form>
               </div>
             </motion.div>
           )}
 
-          {/* ── Step 2 (OTC Mode): Student Identity Details ── */}
+          {/* ── Student Identity Details ── */}
           {step === "otc_details" && (
             <motion.div
               key="otc_details"
@@ -556,17 +544,17 @@ export default function Login() {
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => setStep("otc_code")}
-                    className="flex items-center gap-1 text-xs text-white/40 hover:text-white"
+                    className="flex items-center gap-1 text-xs text-white/50 hover:text-white"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" /> Back
                   </button>
-                  <span className="text-[10px] font-mono font-bold text-yellow-400 bg-yellow-500/10 px-2.5 py-1 rounded-md border border-yellow-500/20">
+                  <span className="text-[10px] font-mono font-bold text-[#5b7ef5] bg-[#5b7ef5]/10 px-2.5 py-1 rounded-md border border-[#5b7ef5]/20">
                     CODE: {accessCodeInput}
                   </span>
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-bold text-white">Student Enrollment</h2>
+                  <h2 className="text-xl font-bold text-white">Student Information</h2>
                   <p className="text-xs text-white/50 mt-1">
                     Enter your details to generate your exam session.
                   </p>
