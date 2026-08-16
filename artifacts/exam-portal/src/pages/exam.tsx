@@ -744,13 +744,15 @@ export default function ExamTaking() {
 
               {/* Prev / Next Pagination Controls */}
               {(() => {
-                const isPreviousDisabled = Boolean(
+                const isHardMode = Boolean(
+                  (exam as any)?.difficulty === "hard" ||
                   (exam as any)?.disable_previous ||
+                  exam?.description?.includes("[DIFFICULTY:HARD]") ||
                   exam?.description?.includes("[NO_PREVIOUS]")
                 );
                 return (
                   <div className="flex justify-between items-center pt-8 border-t border-border/40 mt-8">
-                    {!isPreviousDisabled ? (
+                    {!isHardMode ? (
                       <Button
                         type="button"
                         variant="outline"
@@ -758,11 +760,11 @@ export default function ExamTaking() {
                         disabled={idx === 0}
                         className="rounded-xl font-bold border-border/60 cursor-pointer"
                       >
-                        Previous
+                        ← Previous Question
                       </Button>
                     ) : (
-                      <div className="text-xs font-mono font-bold text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg border border-border/40 flex items-center gap-1.5 select-none">
-                        <span>🔒</span> Sequential Navigation (No Back)
+                      <div className="text-xs font-mono font-bold text-red-400 bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20 flex items-center gap-1.5 select-none">
+                        <span>🔒</span> Hard Mode: No Previous Button
                       </div>
                     )}
                     {idx < questions.length - 1 ? (
