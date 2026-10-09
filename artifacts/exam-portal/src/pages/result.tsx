@@ -151,12 +151,23 @@ export default function Result() {
                               <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-[#1d4ed8] font-mono font-bold text-xs flex items-center justify-center shrink-0">
                                 {String(idx + 1).padStart(2, '0')}
                               </span>
-                              <h3 className="font-bold text-slate-900 text-base leading-snug">{q.question}</h3>
+                              <h3 className="font-bold text-slate-900 text-base leading-snug whitespace-pre-line">{q.question}</h3>
                             </div>
                             <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 shrink-0">
                               {q.marks} pts
                             </span>
                           </div>
+
+                          {q.question_image && (
+                            <div className="my-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex justify-center p-2 max-h-[300px]">
+                              <img
+                                src={q.question_image}
+                                alt={`Question ${idx + 1} diagram`}
+                                className="max-h-[280px] w-auto max-w-full object-contain rounded-lg"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
 
                           <div className="space-y-3 pt-2">
                              {/* Student's Answer */}

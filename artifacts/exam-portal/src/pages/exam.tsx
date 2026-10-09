@@ -189,6 +189,8 @@ export default function ExamTaking() {
           marks: q.marks,
           sort_order: q.sort_order,
           explanation: q.explanation ?? null,
+          question_image: q.question_image ?? null,
+          option_images: q.option_images ?? null,
         })),
       };
 
@@ -692,11 +694,22 @@ export default function ExamTaking() {
                 </div>
                 <div className="flex-1 min-w-0 space-y-5">
                   <div className="flex justify-between items-start gap-3">
-                    <h3 className="text-lg sm:text-xl font-bold leading-relaxed text-slate-900">{q.question}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold leading-relaxed text-slate-900 whitespace-pre-line">{q.question}</h3>
                     <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 shrink-0">
                       {q.marks} pts
                     </span>
                   </div>
+
+                  {q.question_image && (
+                    <div className="my-4 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex justify-center p-2 sm:p-4 max-h-[420px]">
+                      <img
+                        src={q.question_image}
+                        alt={`Question ${idx + 1} diagram`}
+                        className="max-h-[380px] w-auto max-w-full object-contain rounded-lg shadow-sm"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
 
                   {q.question_type === "mcq" && q.options && (
                     <RadioGroup
@@ -715,7 +728,16 @@ export default function ExamTaking() {
                           onClick={() => handleAnswerChange(q.id, opt)}
                         >
                           <RadioGroupItem value={opt} id={`q${q.id}-opt${i}`} className="border-slate-400 text-[#1d4ed8]" />
-                          <Label htmlFor={`q${q.id}-opt${i}`} className="flex-1 text-sm sm:text-base cursor-pointer font-bold leading-relaxed text-slate-900">{opt}</Label>
+                          <Label htmlFor={`q${q.id}-opt${i}`} className="flex-1 text-sm sm:text-base cursor-pointer font-bold leading-relaxed text-slate-900 flex flex-col gap-2">
+                            <span>{opt}</span>
+                            {q.option_images && q.option_images[i] && (
+                              <img
+                                src={q.option_images[i]}
+                                alt={`Option ${i + 1}`}
+                                className="max-h-36 max-w-xs object-contain rounded border border-slate-200 bg-white p-1"
+                              />
+                            )}
+                          </Label>
                         </div>
                       ))}
                     </RadioGroup>

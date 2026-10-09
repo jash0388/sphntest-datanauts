@@ -30,6 +30,8 @@ export interface SupabaseQuestion {
   marks: number;
   sort_order: number;
   explanation?: string | null;
+  question_image?: string | null;
+  option_images?: string[] | null;
   created_at: string;
 }
 
